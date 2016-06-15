@@ -17,7 +17,7 @@ BloomapFamily *family;
 unsigned empty_prepurge;
 unsigned empty_purge;
 
-bool testIteration(unsigned ninsert, unsigned space, double prob) {
+bool testIteration(unsigned ninsert, unsigned space, double prob, unsigned prefill) {
 	/* First, prepare two disjoint sets */
 	map<uint64_t,bool> insert1, insert2;
 	while (insert1.size() < ninsert) {
@@ -35,10 +35,12 @@ bool testIteration(unsigned ninsert, unsigned space, double prob) {
 	/* Preapre family and filters */
 	if (!family) {
 		family = BloomapFamily::forElementsAndProb(space, prob);
-		/* Now, let's pretend to have ALL the elements in some map */
-		Bloomap *funky = family->newMap();
-		for (unsigned i = 1; i > 0; i++) {
-			funky->add(i);
+		/* Now, let's pretend to have 2^prefill elements in some map */
+		if (prefill) {
+			Bloomap *funky = family->newMap();
+			for (unsigned i = 0; i < (1U<<prefill); i++) {
+				funky->add(i);
+			}
 		}
 	}
 
@@ -76,14 +78,14 @@ bool testIteration(unsigned ninsert, unsigned space, double prob) {
 }
 
 void usage(void) {
-	cerr << "Usage: ./test insert_elements space_for probability iterations" << endl;
+	cerr << "Usage: ./test insert_elements space_for probability iterations prefill" << endl;
 	cerr << "  Where elements in number of elements to be inserted, and probability is the required false-positive rate." << endl;
 }
 
 int main(int argc, char* argv[]) {
 	
 	/* Check for sufficient arguments and their sanity*/
-	if (argc != 5) {
+	if (argc != 6) {
 		usage();
 		return 1;
 	}
@@ -92,6 +94,7 @@ int main(int argc, char* argv[]) {
 	unsigned space = atoi(argv[2]);
 	double prob = atof(argv[3]);
 	unsigned iter = atoi(argv[4]);
+	unsigned prefill = atoi(argv[5]);
 
 	/* Allright, we are all set. Let's generate the elements for test. We'll to
 	 * this now, because bloomap will use rng and we want the test to be
@@ -100,7 +103,7 @@ int main(int argc, char* argv[]) {
 
 	unsigned empty_count = 0;
 	for (unsigned i = 0; i < iter; i++) {
-		testIteration(ninsert, space, prob);
+		testIteration(ninsert, space, prob, prefill);
 	}
 
 	cout << ":: (pre-purge)   Attempted " << iter << " iterations, " << empty_prepurge << "(" << setprecision(2)<<(100*empty_prepurge/iter) <<"%) of there were empty." << endl;
