@@ -128,6 +128,16 @@ BloomFilter* BloomFilter::intersect(BloomFilter *filter) {
 	return this;
 }
 
+BloomFilter* BloomFilter::or_from(BloomFilter *filter) {
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
+		for (unsigned i = 0; i < compsize; i++) {
+			if (filter->bits[comp][i])
+			bits[comp][i] = true;
+		}
+	}
+	return this;
+}
+
 bool BloomFilter::isEmpty(void) {
 	for (auto &comp : bits) {
 		bool empty = true;

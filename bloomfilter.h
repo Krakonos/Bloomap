@@ -43,6 +43,7 @@ class BloomFilter {
 		bool isEmpty(void);
 
 		BloomFilter* intersect(BloomFilter *filter);
+		BloomFilter* or_from(BloomFilter *filter);
 
 	protected:
 		unsigned nfunc, compsize, ncomp;
