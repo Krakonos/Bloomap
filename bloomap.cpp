@@ -149,7 +149,7 @@ BloomapIterator& BloomapIterator::operator++() {
 		/* Allright, there is at least one set to explore. Jum to it. */
 		glob_pos++;
 		set_iterator = map->family()->ins_data[glob_pos].begin();
-		if (isValid()) return *this;
+		if (isValid() && map->contains(*set_iterator)) return *this;
 	}
 	return *this;
 }
@@ -171,5 +171,6 @@ bool BloomapIterator::operator!=(const BloomapIterator& rhs) {
 
 unsigned BloomapIterator::operator*() {
 	assert(set_iterator != map->family()->ins_data[glob_pos].end());
+	assert(map->contains(*set_iterator));
 	return *set_iterator;
 }
