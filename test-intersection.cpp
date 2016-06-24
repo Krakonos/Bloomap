@@ -101,7 +101,6 @@ int main(int argc, char* argv[]) {
 	 * repeatable.
 	 */
 
-	unsigned empty_count = 0;
 	for (unsigned i = 0; i < iter; i++) {
 		testIteration(ninsert, space, prob, prefill);
 	}

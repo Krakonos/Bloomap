@@ -3,6 +3,7 @@
 #include <bitset>
 #include <map>
 #include <vector>
+#include <cassert>
 
 #include "murmur.h"
 #include "bloomap.h"
@@ -29,8 +30,8 @@ bool Bloomap::add(unsigned ele) {
 #ifdef DEBUG_STATS
 	real_contents.insert(ele);
 #endif
+	f->newElement(ele, hash(ele, 0)); /* This can't be conditional, as we need even collided elements! */
 	if (BloomFilter::add(ele)) {
-		f->newElement(ele, hash(ele, 0));
 		return true;
 	} else return false;
 }
@@ -54,8 +55,6 @@ Bloomap* Bloomap::intersect(Bloomap* map) {
 	return this;
 }
 
-//Bloomap* unite(Bloomap* map);
-
 void Bloomap::clear() {
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
@@ -67,9 +66,9 @@ void Bloomap::clear() {
 void Bloomap::purge() {
 	Bloomap orig(this);
 	clear();
-	for (unsigned pos = 0; pos < compsize; pos++) {
-		if (!orig.bits[0][pos]) continue;
-		std::unordered_set<int> &set = family()->ins_data[pos];
+	for (unsigned glob_pos = 0; glob_pos < compsize; glob_pos++) {
+		if (!orig.bits[0][glob_pos]) continue;
+		std::unordered_set<unsigned> &set = family()->ins_data[glob_pos];
 		for (const auto entry : set) {
 			if (orig.contains(entry))
 				add(entry);
@@ -87,4 +86,90 @@ void Bloomap::dumpStats(void) {
 	std::cerr << "  Map popcount (ratio):   " << popcount()*1.0/mapsize() << std::endl;
 	std::cerr << "  Empty:                  " << (isEmpty() ? "yes" : "no") << std::endl;
 
+}
+
+
+
+/* Iterator stuff */
+
+BloomapIterator begin(Bloomap *map) {
+	return BloomapIterator(map, false);
+}
+
+BloomapIterator end(Bloomap *map) {
+	return BloomapIterator(map, true);
+}
+
+BloomapIterator::BloomapIterator(const BloomapIterator& orig) {
+	map = orig.map;
+	glob_pos = orig.glob_pos;
+	set_iterator = orig.set_iterator;
+}
+
+BloomapIterator::BloomapIterator(Bloomap *map, bool end)
+	: map(map)
+{
+	/* We are creating the "end" iterator */
+	if (end) {
+		glob_pos = map->compsize-1;
+		set_iterator = map->family()->ins_data[map->compsize-1].end();
+	} else {
+		glob_pos = 0;
+		set_iterator = map->family()->ins_data[0].begin();
+
+		/* Check if the first element is in the map, otherwise call ++ to find one. */
+		if (set_iterator == map->family()->ins_data[0].end() || !map->contains(*set_iterator))
+			operator++();
+	}
+}
+
+bool BloomapIterator::isValid(void) {
+	return !(set_iterator == map->family()->ins_data[glob_pos].end());
+}
+
+/* Advance the iterator and return true if it's dereferencable */
+bool BloomapIterator::advanceSetIterator(void) {
+	if (isValid())
+		set_iterator++;
+	/* Return false if the iterator changed to past-the-end as well! */
+	return isValid();
+}
+
+BloomapIterator& BloomapIterator::operator++() {
+	while (1) {
+		/* Advance the iterator. If it's dereferenceable, check if it's in the map. Otherwise continue to the next element. */
+		if (advanceSetIterator()) {
+			if (map->contains(*set_iterator)) return *this;
+			else continue;
+		}
+
+		/* Now the iterator is invalid. If it's in the last set, abort now. */
+		if (glob_pos == (map->compsize-1)) return *this;
+
+		/* Allright, there is at least one set to explore. Jum to it. */
+		glob_pos++;
+		set_iterator = map->family()->ins_data[glob_pos].begin();
+		if (isValid()) return *this;
+	}
+	return *this;
+}
+
+BloomapIterator BloomapIterator::operator++(int count) {
+	BloomapIterator tmp(*this);
+	operator++();
+	return tmp;
+}
+
+bool BloomapIterator::operator==(const BloomapIterator& rhs) {
+	return (map == rhs.map && glob_pos == rhs.glob_pos && set_iterator == rhs.set_iterator);
+}
+
+bool BloomapIterator::operator!=(const BloomapIterator& rhs) {
+	return !operator==(rhs);
+	//return !(map == rhs.map && glob_pos == rhs.glob_pos && set_iterator == rhs.set_iterator);
+}
+
+unsigned BloomapIterator::operator*() {
+	assert(set_iterator != map->family()->ins_data[glob_pos].end());
+	return *set_iterator;
 }

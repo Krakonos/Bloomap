@@ -1,14 +1,20 @@
-CXXFLAGS=-std=c++11 -g -Wall -DDEBUG_STATS
+CXXFLAGS=-std=c++11 -g -Wall -DDEBUG_STATS -O2
 CC=g++
 
 OBJECTS=bloomfilter.o bloomapfamily.o bloomap.o murmur.o
 
-all: tests
+all: tests catch
 
 %.html : %.md
 	asciidoc -o $@ $<
 
 doc: README.html
+
+catch: catch-test.o catch-main.o $(OBJECTS)
+	$(CC) $(CXXLAGS) -o catch-test $^
+
+check: catch
+	./catch-test -d yes
 
 tests: test test-intersection
 
@@ -18,7 +24,7 @@ test: $(OBJECTS) test.o
 test-intersection: $(OBJECTS) test-intersection.o
 	$(CC) $(CXXLAGS) -o test-intersection $^
 
-check: test test-intersection
+old-check: test test-intersection
 	./test 1000 10000 0.01
 	./test-intersection  1000 1000 0.001 2 0
 	./test-intersection  1000 10000 0.001 2 0

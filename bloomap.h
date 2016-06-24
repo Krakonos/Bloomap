@@ -14,6 +14,7 @@
 #include <bitset>
 #include <vector>
 #include <unordered_set>
+#include <iterator>
 
 #include "bloomfilter.h"
 
@@ -54,7 +55,32 @@ class Bloomap : public BloomFilter {
 			counter_query = 0;
 		}
 
+	friend class BloomapIterator;
+
 #endif
 };
+
+class BloomapIterator : public std::iterator<std::input_iterator_tag, unsigned > {
+	public:
+		BloomapIterator(const BloomapIterator& orig);
+		BloomapIterator(Bloomap *map, bool end = false);
+		BloomapIterator& operator++();
+		BloomapIterator operator++(int);
+		bool operator==(const BloomapIterator& rhs);
+		bool operator!=(const BloomapIterator& rhs);
+		unsigned operator*();
+		bool isValid(void);
+
+//		BloomapIterator(const BloomapIterator& mit) : p(mit.p) {}
+
+	protected:
+		Bloomap* map;
+		unsigned glob_pos; /* A position in the global vector of sets. */
+		std::unordered_set<unsigned>::iterator set_iterator;
+		bool advanceSetIterator(void);
+};
+
+BloomapIterator begin(Bloomap *map);
+BloomapIterator end(Bloomap *map);
 
 #endif

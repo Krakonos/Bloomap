@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cassert>
+#include <iostream>
 
 #include "bloomapfamily.h"
 
@@ -34,4 +35,12 @@ Bloomap* BloomapFamily::newMap(void) {
 /* File the new element under index */
 void BloomapFamily::newElement(unsigned ele, unsigned index) {
 	ins_data[index].insert(ele);
+}
+
+void BloomapFamily::dumpCandidates(void) {
+	for (unsigned i = 0; i < ins_data.size(); i++) {
+		for (const auto& e : ins_data[i]) {
+			std::cerr << "Element (at " << i << "): " << e << std::endl;
+		}
+	}
 }

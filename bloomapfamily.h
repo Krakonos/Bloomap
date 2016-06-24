@@ -27,6 +27,8 @@ class BloomapFamily {
 
 		void newElement(unsigned ele, unsigned index);
 
+		void dumpCandidates(void);
+
 
 	private:
 		std::vector< Bloomap* > bloomaps;
@@ -34,9 +36,10 @@ class BloomapFamily {
 		/* Global storage for inserted elements. Let h_1 be the first hash
 		 * function, then element e is found in set h_1(e). */
 	protected:
-		std::vector< std::unordered_set<int> > ins_data;
+		std::vector< std::unordered_set<unsigned> > ins_data;
 
 	friend class Bloomap;
+	friend class BloomapIterator;
 };
 
 #endif
