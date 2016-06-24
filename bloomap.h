@@ -38,6 +38,9 @@ class Bloomap : public BloomFilter {
 		Bloomap* intersect(Bloomap* map);
 		//Bloomap* unite(Bloomap* map);
 
+		bool operator==(const Bloomap* rhs);
+		bool operator!=(const Bloomap* rhs);
+
 		void purge();
 
 	protected:

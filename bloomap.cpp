@@ -89,6 +89,20 @@ void Bloomap::dumpStats(void) {
 }
 
 
+/* Bloomap operators */
+
+bool Bloomap::operator==(const Bloomap* rhs) {
+	/* Trivial cases */
+	if (this == rhs) return true;
+	if (f != rhs->f) return false;
+
+	/* We have to check the bits.. */
+	return BloomFilter::operator==(rhs);
+}
+
+bool Bloomap::operator!=(const Bloomap* rhs) {
+	return !operator==(rhs);
+}
 
 /* Iterator stuff */
 

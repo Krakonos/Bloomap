@@ -151,3 +151,17 @@ bool BloomFilter::isEmpty(void) {
 	}
 	return false;
 }
+
+bool BloomFilter::operator==(const BloomFilter* rhs) {
+	if (ncomp != rhs->ncomp || compsize != rhs->compsize || nfunc != rhs->nfunc) return false;
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
+		for (unsigned i = 0; i < compsize; i++) {
+			if (rhs->bits[comp][i] != bits[comp][i]) return false;
+		}
+	}
+	return true;
+}
+
+bool BloomFilter::operator!=(const BloomFilter* rhs) {
+	return !operator==(rhs);
+}

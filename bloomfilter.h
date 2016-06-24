@@ -45,6 +45,9 @@ class BloomFilter {
 		BloomFilter* intersect(BloomFilter *filter);
 		BloomFilter* or_from(BloomFilter *filter);
 
+		bool operator==(const BloomFilter* rhs);
+		bool operator!=(const BloomFilter* rhs);
+
 	protected:
 		unsigned nfunc, compsize, ncomp;
 		std::vector< std::vector<bool> > bits;

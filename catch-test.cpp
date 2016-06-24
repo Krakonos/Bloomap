@@ -143,3 +143,34 @@ TEST_CASE( "****** Bloomap iterator.", "[operators]" ) {
 	REQUIRE( found_from_c == c.size() );
 	REQUIRE( found_not_in_map == 0 );
 }
+
+TEST_CASE( "****** Bloomap operator==().", "[operators]" ) {
+	BloomapFamily *f = BloomapFamily::forElementsAndProb(ELE, 0.01);
+
+	Bloomap* map1 = f->newMap();
+	Bloomap* map2 = f->newMap();
+
+	REQUIRE (map1 != NULL);
+	REQUIRE (map1->popcount() == 0);
+	REQUIRE (map2 != NULL);
+	REQUIRE (map2->popcount() == 0);
+
+	SECTION("--> Empty maps are equal.") {
+		REQUIRE(*map1 == map2);
+	}
+
+	SECTION("--> Copies are equal.") {
+		bloomap_fill(map1, ELE);
+		map2->or_from(map1);
+		REQUIRE(*map1 == map2);
+	}
+
+	SECTION("--> Distinc copies are not equal.") {
+		bloomap_fill(map1, ELE);
+		map2->or_from(map1);
+		unsigned e = rand();
+		while (map2->contains(e)) e = rand();
+		map2->add(e);
+		REQUIRE(*map1 != map2);
+	}
+}
