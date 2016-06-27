@@ -121,9 +121,12 @@ BloomapIterator::BloomapIterator(const BloomapIterator& orig) {
 	set_iterator = orig.set_iterator;
 }
 
-BloomapIterator::BloomapIterator(Bloomap *map, bool end)
-	: map(map)
-{
+BloomapIterator::BloomapIterator(Bloomap *map, bool end) {
+	_init(map,end);
+}
+
+void BloomapIterator::_init(Bloomap *_map, bool end) {
+	map = _map;
 	/* We are creating the "end" iterator */
 	if (end) {
 		glob_pos = map->compsize-1;
@@ -139,8 +142,8 @@ BloomapIterator::BloomapIterator(Bloomap *map, bool end)
 }
 
 BloomapIterator::BloomapIterator(Bloomap *map, unsigned& first)
-	: BloomapIterator(map)
 {
+	_init(map);
 	first = operator*();
 }
 

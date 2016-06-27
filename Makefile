@@ -1,4 +1,4 @@
-CXXFLAGS=-std=c++11 -g -Wall -DDEBUG_STATS -O2
+CXXFLAGS=-std=c++98 -g -Wall -DDEBUG_STATS -O2
 CC=g++
 
 OBJECTS=bloomfilter.o bloomapfamily.o bloomap.o murmur.o

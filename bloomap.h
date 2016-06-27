@@ -68,6 +68,7 @@ class BloomapIterator : public std::iterator<std::input_iterator_tag, unsigned >
 	public:
 		BloomapIterator(const BloomapIterator& orig);
 		BloomapIterator(Bloomap *map, bool end = false);
+		void _init(Bloomap *map, bool end = false);
 		BloomapIterator(Bloomap *map, unsigned& first);
 		BloomapIterator& operator++();
 		BloomapIterator operator++(int);

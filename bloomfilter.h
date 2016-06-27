@@ -23,6 +23,7 @@ class BloomFilter {
 		 * 	nfunc		number of hash functions used in each compartment
 		 */
 		BloomFilter(unsigned ncomp, unsigned compsize, unsigned _nfunc);
+		void _init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc);
 		BloomFilter(BloomFilter *orig);
 		~BloomFilter();
 

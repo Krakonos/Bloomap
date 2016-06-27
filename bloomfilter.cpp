@@ -19,14 +19,14 @@ static std::vector<uint32_t> hash_functions;
  * Create a simple instance, with k compartments, each with it's own hash
  * function, and split m bits into all components.
  */
-BloomFilter::BloomFilter(unsigned m, unsigned k)
-	: BloomFilter(k, m/k, 1)
-{
+BloomFilter::BloomFilter(unsigned m, unsigned k) {
+	_init(k, m/k, 1);
 }
 
-BloomFilter::BloomFilter(BloomFilter *orig)
-	: BloomFilter(orig->ncomp, orig->compsize, orig->nfunc)
-{
+BloomFilter::BloomFilter(BloomFilter *orig) {
+
+	_init(orig->ncomp, orig->compsize, orig->nfunc);
+
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		for (unsigned pos = 0; pos < orig->compsize; pos++) {
 			bits[comp][pos] = orig->bits[comp][pos];
@@ -38,9 +38,15 @@ BloomFilter::BloomFilter(BloomFilter *orig)
  * Create rather convoluted instance, parametrized with number of components,
  * component size, and number of hash functions for EACH component.
  */
-BloomFilter::BloomFilter(unsigned ncomp, unsigned compsize, unsigned nfunc) :
-	nfunc(nfunc), compsize(compsize), ncomp(ncomp)
-{
+BloomFilter::BloomFilter(unsigned ncomp, unsigned compsize, unsigned nfunc) {
+	_init(ncomp, compsize, nfunc);
+}
+
+void BloomFilter::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc) {
+	ncomp = _ncomp;
+	compsize = _compsize;
+	nfunc = _nfunc;
+
 	assert(ncomp);
 	assert(compsize);
 	assert(nfunc);
