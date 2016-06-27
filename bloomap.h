@@ -54,10 +54,7 @@ class Bloomap : public BloomFilter {
 		unsigned counter_fp; /* False positive counter */
 		unsigned counter_query; /* Query counter */
 
-		void resetStats() {
-			counter_fp = 0;
-			counter_query = 0;
-		}
+		void resetStats(void);
 
 	friend class BloomapIterator;
 

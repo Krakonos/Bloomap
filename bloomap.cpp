@@ -26,6 +26,11 @@ Bloomap::Bloomap(Bloomap *orig)
 {
 }
 
+void Bloomap::resetStats(void) {
+	counter_fp = 0;
+	counter_query = 0;
+}
+
 bool Bloomap::add(unsigned ele) {
 #ifdef DEBUG_STATS
 	real_contents.insert(ele);
