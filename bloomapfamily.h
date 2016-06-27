@@ -10,7 +10,7 @@
 #ifndef __BLOOMAPFAMILY_H__
 #define __BLOOMAPFAMILY_H__
 
-#include <unordered_set>
+#include <set>
 
 #include "bloomap.h"
 
@@ -36,7 +36,7 @@ class BloomapFamily {
 		/* Global storage for inserted elements. Let h_1 be the first hash
 		 * function, then element e is found in set h_1(e). */
 	protected:
-		std::vector< std::unordered_set<unsigned> > ins_data;
+		std::vector< std::set<unsigned> > ins_data;
 
 	friend class Bloomap;
 	friend class BloomapIterator;

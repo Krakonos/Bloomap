@@ -10,7 +10,7 @@
 #ifndef __BLOOMFILTER_H__
 #define __BLOOMFILTER_H__
 
-#include <cstdint>
+#include <stdint.h>
 #include <bitset>
 #include <vector>
 

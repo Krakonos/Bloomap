@@ -2,6 +2,7 @@
 #include <map>
 #include <vector>
 #include <iomanip>
+#include <cstdlib>
 
 #include "bloomfilter.h"
 #include "bloomapfamily.h"
@@ -45,12 +46,12 @@ bool testIteration(unsigned ninsert, unsigned space, double prob, unsigned prefi
 	}
 
 	Bloomap *bmap1 = family->newMap();
-	for (const auto &pair : insert1) {
+	for (const std::pair<unsigned, bool> &pair : insert1) {
 		bmap1->add(pair.first);
 	}
 
 	Bloomap *bmap2 = family->newMap();
-	for (const auto &pair : insert2) {
+	for (const std::pair<unsigned, bool> &pair : insert2) {
 		bmap2->add(pair.first);
 	}
 	cout << "==> These maps will be intersected: " << endl;

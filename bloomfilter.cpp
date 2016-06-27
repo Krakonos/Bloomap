@@ -1,9 +1,9 @@
 #include <iostream>
-#include <cstdint>
 #include <bitset>
 #include <map>
 #include <vector>
 #include <cassert>
+#include <cstdlib>
 
 #include "murmur.h"
 #include "bloomfilter.h"
@@ -53,7 +53,7 @@ BloomFilter::BloomFilter(unsigned ncomp, unsigned compsize, unsigned nfunc) :
 
 	/* Generate compartments */
 	bits.resize(ncomp);
-	for (auto &comp : bits) {
+	for (std::vector<bool> &comp : bits) {
 		comp.resize(compsize, false); /* Component size is in bits, take care to have empty bitmap */
 	}
 }
@@ -66,7 +66,7 @@ bool BloomFilter::add(unsigned ele) {
 	bool changed = false;
 	/* Set appropriate bits in each container */
 	unsigned fn = 0;
-	for (auto &comp : bits) {
+	for (std::vector<bool> &comp : bits) {
 		for (unsigned i = 0; i < nfunc; i++) {
 			uint32_t h = hash(ele, fn++);
 			if (!comp[h]) changed = true;
@@ -78,7 +78,7 @@ bool BloomFilter::add(unsigned ele) {
 
 bool BloomFilter::contains(unsigned ele) {
 	unsigned fn = 0;
-	for (auto &comp : bits) {
+	for (std::vector<bool> &comp : bits) {
 		for (unsigned i = 0; i < nfunc; i++) {
 			uint32_t h = hash(ele, fn++);
 			if (!comp[h]) return false;
@@ -94,7 +94,7 @@ unsigned BloomFilter::hash(unsigned ele, unsigned i) {
 void BloomFilter::dump(void) {
 	using namespace std;
 	cerr << "=> Bloom filter dump (" << bits.size() << " compartments, " << compsize << " bits in each)" << endl;
-	for (auto &comp : bits) {
+	for (std::vector<bool> &comp : bits) {
 		for (unsigned i = 0; i < compsize; i++) {
 			if (comp[i]) cerr << "1";
 			else cerr << ".";
@@ -106,7 +106,7 @@ void BloomFilter::dump(void) {
 
 unsigned BloomFilter::popcount(void) {
 	unsigned count = 0;
-	for (auto &comp : bits) {
+	for (std::vector<bool> &comp : bits) {
 		for (unsigned i = 0; i < compsize; i++) {
 			if (comp[i]) count++;
 		}
@@ -139,7 +139,7 @@ BloomFilter* BloomFilter::or_from(BloomFilter *filter) {
 }
 
 bool BloomFilter::isEmpty(void) {
-	for (auto &comp : bits) {
+	for (std::vector<bool> &comp : bits) {
 		bool empty = true;
 		for (unsigned i = 0; i < compsize; i++) {
 			if (comp[i]) {

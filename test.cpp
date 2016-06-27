@@ -1,6 +1,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <cstdlib>
 
 #include "bloomfilter.h"
 #include "bloomapfamily.h"
@@ -56,12 +57,12 @@ int main(int argc, char* argv[]) {
 	unsigned insert_found = 0, check_found = 0;
 
 	/* Insert all the elements */
-	for (const auto &pair : insert) {
+	for (const std::pair<uint64_t, bool> &pair : insert) {
 		bmap->add(pair.first);
 	}
 
 	/* Check the inserted elements, they should all be there */
-	for (const auto &pair : insert) {
+	for (const std::pair<uint64_t, bool> &pair : insert) {
 		if (bmap->contains(pair.first)) insert_found++;
 	}
 
@@ -69,7 +70,7 @@ int main(int argc, char* argv[]) {
 
 
 	/* Check the set that should not be contained */
-	for (const auto &pair : check) {
+	for (const std::pair<uint64_t, bool> &pair : check) {
 		if (bmap->contains(pair.first)) check_found++;
 	}
 	

@@ -10,7 +10,7 @@
 #ifndef __MURMUR_H__
 #define __MURMUR_H__
 
-#include <cstdint>
+#include <stdint.h>
 
 uint32_t MurmurHash1 ( const void * key, int len, uint32_t seed );
 uint32_t MurmurHash1 ( uint64_t key, uint32_t seed );

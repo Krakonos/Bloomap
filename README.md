@@ -49,7 +49,7 @@ some basics. If you are interested, take a closer look into the headers.
  - `DEBUG_STATS` macro. This enables some public counters and helper functinons,
    intended to gather statistics about the maps (currently only number of false
    positives and queries). To do this, bloomaps will actually carry the
-   real list of items contained in them, in a `std::unordered_set`.
+   real list of items contained in them, in a `std::set`.
 
 == TODO and ideas
 

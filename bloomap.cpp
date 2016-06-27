@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cstdint>
 #include <bitset>
 #include <map>
 #include <vector>
@@ -19,6 +18,7 @@ static std::vector<uint32_t> hash_functions;
 Bloomap::Bloomap(BloomapFamily* f, unsigned m, unsigned k) :
 	BloomFilter(m, k), f(f)
 {
+	resetStats();
 }
 
 Bloomap::Bloomap(Bloomap *orig)
@@ -68,8 +68,9 @@ void Bloomap::purge() {
 	clear();
 	for (unsigned glob_pos = 0; glob_pos < compsize; glob_pos++) {
 		if (!orig.bits[0][glob_pos]) continue;
-		std::unordered_set<unsigned> &set = family()->ins_data[glob_pos];
-		for (const auto entry : set) {
+		std::set<unsigned> &set = family()->ins_data[glob_pos];
+		for (std::set<unsigned>::const_iterator it = set.begin(); it != set.end(); it++) {
+			unsigned entry = *it;
 			if (orig.contains(entry))
 				add(entry);
 			else {
@@ -137,6 +138,12 @@ BloomapIterator::BloomapIterator(Bloomap *map, bool end)
 	}
 }
 
+BloomapIterator::BloomapIterator(Bloomap *map, unsigned& first)
+	: BloomapIterator(map)
+{
+	first = operator*();
+}
+
 bool BloomapIterator::isValid(void) {
 	return !(set_iterator == map->family()->ins_data[glob_pos].end());
 }
@@ -184,7 +191,7 @@ bool BloomapIterator::operator!=(const BloomapIterator& rhs) {
 }
 
 unsigned BloomapIterator::operator*() {
-	assert(set_iterator != map->family()->ins_data[glob_pos].end());
-	assert(map->contains(*set_iterator));
-	return *set_iterator;
+	/* We need to make sure the iterator works even if not valid, for the foreach macros to work properly. */
+	if (isValid()) return *set_iterator;
+	else return 0;
 }

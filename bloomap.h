@@ -10,13 +10,14 @@
 #ifndef __BLOOMAP_H__
 #define __BLOOMAP_H__
 
-#include <cstdint>
+#include <stdint.h>
 #include <bitset>
 #include <vector>
-#include <unordered_set>
+#include <set>
 #include <iterator>
 
 #include "bloomfilter.h"
+
 
 class BloomapFamily;
 
@@ -48,10 +49,10 @@ class Bloomap : public BloomFilter {
 
 #ifdef DEBUG_STATS
 	protected:
-		std::unordered_set<unsigned> real_contents;
+		std::set<unsigned> real_contents;
 	public:
-		unsigned counter_fp = 0; /* False positive counter */
-		unsigned counter_query = 0; /* Query counter */
+		unsigned counter_fp; /* False positive counter */
+		unsigned counter_query; /* Query counter */
 
 		void resetStats() {
 			counter_fp = 0;
@@ -67,6 +68,7 @@ class BloomapIterator : public std::iterator<std::input_iterator_tag, unsigned >
 	public:
 		BloomapIterator(const BloomapIterator& orig);
 		BloomapIterator(Bloomap *map, bool end = false);
+		BloomapIterator(Bloomap *map, unsigned& first);
 		BloomapIterator& operator++();
 		BloomapIterator operator++(int);
 		bool operator==(const BloomapIterator& rhs);
@@ -79,11 +81,13 @@ class BloomapIterator : public std::iterator<std::input_iterator_tag, unsigned >
 	protected:
 		Bloomap* map;
 		unsigned glob_pos; /* A position in the global vector of sets. */
-		std::unordered_set<unsigned>::iterator set_iterator;
+		std::set<unsigned>::iterator set_iterator;
 		bool advanceSetIterator(void);
 };
 
 BloomapIterator begin(Bloomap *map);
 BloomapIterator end(Bloomap *map);
+
+#define BLOOMAP_FOR_EACH(VAR, MAP) for (BloomapIterator _bloomap_it_##MAP(MAP,VAR); _bloomap_it_##MAP != end(MAP); _bloomap_it_##MAP++, VAR=*_bloomap_it_##MAP)
 
 #endif

@@ -27,7 +27,8 @@ Contents bloomap_fill(Bloomap* map, unsigned count, unsigned seed = 0) {
 
 unsigned bloomap_count_elements(Bloomap* map, Contents& list) {
 	unsigned insert_found = 0;
-	for (const auto& pair : list ) {
+	for (Contents::iterator it = list.begin(); it != list.end(); ++it) {
+		pair<uint64_t,bool> pair = *it;
 		if (map->contains(pair.first)) insert_found++;
 	}
 	return insert_found;
@@ -131,7 +132,8 @@ TEST_CASE( "****** Bloomap iterator.", "[operators]" ) {
 	unsigned found = 0;
 	unsigned found_from_c = 0;
 	unsigned found_not_in_map = 0;
-	for (const auto& e : map1 ) {
+	unsigned e;
+	BLOOMAP_FOR_EACH(e, map1) {
 		found++;
 		if (c.count(e)) {
 			found_from_c++;
