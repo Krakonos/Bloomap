@@ -46,13 +46,13 @@ bool testIteration(unsigned ninsert, unsigned space, double prob, unsigned prefi
 	}
 
 	Bloomap *bmap1 = family->newMap();
-	for (const std::pair<unsigned, bool> &pair : insert1) {
-		bmap1->add(pair.first);
+	for (map<uint64_t,bool>::iterator it = insert1.begin(); it != insert1.end(); ++it) {
+		bmap1->add((*it).first);
 	}
 
 	Bloomap *bmap2 = family->newMap();
-	for (const std::pair<unsigned, bool> &pair : insert2) {
-		bmap2->add(pair.first);
+	for (map<uint64_t,bool>::iterator it = insert2.begin(); it != insert2.end(); ++it) {
+		bmap2->add((*it).first);
 	}
 	cout << "==> These maps will be intersected: " << endl;
 	bmap1->dumpStats();

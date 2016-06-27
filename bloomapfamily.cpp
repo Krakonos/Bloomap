@@ -39,7 +39,8 @@ void BloomapFamily::newElement(unsigned ele, unsigned index) {
 
 void BloomapFamily::dumpCandidates(void) {
 	for (unsigned i = 0; i < ins_data.size(); i++) {
-		for (const unsigned e : ins_data[i]) {
+		for (std::set<unsigned>::iterator it = ins_data[i].begin(); it != ins_data[i].end(); ++it) {
+			unsigned e = *it;
 			std::cerr << "Element (at " << i << "): " << e << std::endl;
 		}
 	}

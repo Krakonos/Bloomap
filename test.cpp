@@ -57,21 +57,21 @@ int main(int argc, char* argv[]) {
 	unsigned insert_found = 0, check_found = 0;
 
 	/* Insert all the elements */
-	for (const std::pair<uint64_t, bool> &pair : insert) {
-		bmap->add(pair.first);
+	for (map<uint64_t,bool>::iterator it = insert.begin(); it != insert.end(); ++it) {
+		bmap->add((*it).first);
 	}
 
 	/* Check the inserted elements, they should all be there */
-	for (const std::pair<uint64_t, bool> &pair : insert) {
-		if (bmap->contains(pair.first)) insert_found++;
+	for (map<uint64_t,bool>::iterator it = insert.begin(); it != insert.end(); ++it) {
+		if (bmap->contains((*it).first)) insert_found++;
 	}
 
 	bmap->resetStats();
 
 
 	/* Check the set that should not be contained */
-	for (const std::pair<uint64_t, bool> &pair : check) {
-		if (bmap->contains(pair.first)) check_found++;
+	for (map<uint64_t,bool>::iterator it = insert.begin(); it != insert.end(); ++it) {
+		if (bmap->contains((*it).first)) check_found++;
 	}
 	
 	if (insert_found != ninsert) {

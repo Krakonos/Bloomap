@@ -59,8 +59,8 @@ void BloomFilter::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc) {
 
 	/* Generate compartments */
 	bits.resize(ncomp);
-	for (std::vector<bool> &comp : bits) {
-		comp.resize(compsize, false); /* Component size is in bits, take care to have empty bitmap */
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
+		bits[comp].resize(compsize, false); /* Component size is in bits, take care to have empty bitmap */
 	}
 }
 
@@ -72,11 +72,11 @@ bool BloomFilter::add(unsigned ele) {
 	bool changed = false;
 	/* Set appropriate bits in each container */
 	unsigned fn = 0;
-	for (std::vector<bool> &comp : bits) {
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < nfunc; i++) {
 			uint32_t h = hash(ele, fn++);
-			if (!comp[h]) changed = true;
-			comp[h] = true;
+			if (!bits[comp][h]) changed = true;
+			bits[comp][h] = true;
 		}
 	}
 	return changed;
@@ -84,10 +84,10 @@ bool BloomFilter::add(unsigned ele) {
 
 bool BloomFilter::contains(unsigned ele) {
 	unsigned fn = 0;
-	for (std::vector<bool> &comp : bits) {
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < nfunc; i++) {
 			uint32_t h = hash(ele, fn++);
-			if (!comp[h]) return false;
+			if (!bits[comp][h]) return false;
 		}
 	}
 	return true;
@@ -100,9 +100,9 @@ unsigned BloomFilter::hash(unsigned ele, unsigned i) {
 void BloomFilter::dump(void) {
 	using namespace std;
 	cerr << "=> Bloom filter dump (" << bits.size() << " compartments, " << compsize << " bits in each)" << endl;
-	for (std::vector<bool> &comp : bits) {
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
-			if (comp[i]) cerr << "1";
+			if (bits[comp][i]) cerr << "1";
 			else cerr << ".";
 			if (i % 80 == 79) cerr << endl;
 		}
@@ -112,9 +112,9 @@ void BloomFilter::dump(void) {
 
 unsigned BloomFilter::popcount(void) {
 	unsigned count = 0;
-	for (std::vector<bool> &comp : bits) {
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
-			if (comp[i]) count++;
+			if (bits[comp][i]) count++;
 		}
 	}
 	return count;
@@ -145,10 +145,10 @@ BloomFilter* BloomFilter::or_from(BloomFilter *filter) {
 }
 
 bool BloomFilter::isEmpty(void) {
-	for (std::vector<bool> &comp : bits) {
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		bool empty = true;
 		for (unsigned i = 0; i < compsize; i++) {
-			if (comp[i]) {
+			if (bits[comp][i]) {
 				empty = false;
 				break;
 			}
