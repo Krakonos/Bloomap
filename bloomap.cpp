@@ -18,7 +18,9 @@ static std::vector<uint32_t> hash_functions;
 Bloomap::Bloomap(BloomapFamily* f, unsigned m, unsigned k) :
 	BloomFilter(m, k), f(f)
 {
+#ifdef DEBUG_STATS
 	resetStats();
+#endif
 }
 
 Bloomap::Bloomap(Bloomap *orig)
@@ -26,10 +28,12 @@ Bloomap::Bloomap(Bloomap *orig)
 {
 }
 
+#ifdef DEBUG_STATS
 void Bloomap::resetStats(void) {
 	counter_fp = 0;
 	counter_query = 0;
 }
+#endif
 
 bool Bloomap::add(unsigned ele) {
 #ifdef DEBUG_STATS

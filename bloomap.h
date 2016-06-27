@@ -47,6 +47,7 @@ class Bloomap : public BloomFilter {
 	protected:
 		BloomapFamily *f;
 
+	friend class BloomapIterator;
 #ifdef DEBUG_STATS
 	protected:
 		std::set<unsigned> real_contents;
@@ -55,8 +56,6 @@ class Bloomap : public BloomFilter {
 		unsigned counter_query; /* Query counter */
 
 		void resetStats(void);
-
-	friend class BloomapIterator;
 
 #endif
 };
