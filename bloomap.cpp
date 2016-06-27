@@ -189,7 +189,8 @@ BloomapIterator& BloomapIterator::operator++() {
 
 BloomapIterator BloomapIterator::operator++(int count) {
 	BloomapIterator tmp(*this);
-	operator++();
+	for (int i = 0; i < count; i++)
+		operator++();
 	return tmp;
 }
 
