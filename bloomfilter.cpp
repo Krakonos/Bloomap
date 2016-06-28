@@ -8,9 +8,6 @@
 #include "murmur.h"
 #include "bloomfilter.h"
 
-std::map<unsigned, bool> m;
-
-
 /* This is static vector of hash functions. There are in fact seeds for the
  * murmur hash function, and are generated in constructor randomly, as needed */
 static std::vector<uint32_t> hash_functions;
