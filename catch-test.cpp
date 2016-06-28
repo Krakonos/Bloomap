@@ -54,6 +54,12 @@ void bloomap_messup(BloomapFamily *f, unsigned mess_factor) {
 	delete dummy_map;
 }
 
+unsigned gen_element(Bloomap* map) {
+	unsigned e = rand();
+	while (map->contains(e)) e = rand();
+	return e;
+}
+
 
 TEST_CASE( "****** Elementary Bloomap operations." ) {
 	BloomapFamily *f = BloomapFamily::forElementsAndProb(ELE, 0.01);
@@ -69,6 +75,12 @@ TEST_CASE( "****** Elementary Bloomap operations." ) {
 			Contents c = bloomap_fill(map1, ELE);
 			REQUIRE( bloomap_count_elements(map1, c) == ELE );
 		}
+	}
+
+	SECTION("--> add() returns correct changed status") {
+		unsigned e = gen_element(map1);
+		REQUIRE(  map1->add(e) ); /* First addition should return true. */
+		REQUIRE( !map1->add(e) ); /* Other should return false. */
 	}
 
 	SECTION("--> clear() and check") {
