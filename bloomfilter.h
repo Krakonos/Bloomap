@@ -53,6 +53,26 @@ class BloomFilter {
 	protected:
 		unsigned nfunc, compsize, ncomp;
 		std::vector< std::vector<bool> > bits;
+
+		/* The data manipulation functions. The class-wide changed flag is
+		 * used, and has to be reset by it's user. */
+		bool changed;
+		bool inline set(unsigned comp, unsigned bit) {
+			changed |= !bits[comp][bit];
+			bits[comp][bit] = true;
+			return changed;
+		}
+
+		bool inline reset(unsigned comp, unsigned bit) {
+			changed |= bits[comp][bit];
+			bits[comp][bit] = false;
+			return changed;
+		}
+
+		bool inline get(unsigned comp, unsigned bit) const {
+			return bits[comp][bit];
+		}
+
 };
 
 #endif

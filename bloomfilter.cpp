@@ -66,14 +66,13 @@ BloomFilter::~BloomFilter() {
 }
 
 bool BloomFilter::add(unsigned ele) {
-	bool changed = false;
+	changed = false;
 	/* Set appropriate bits in each container */
 	unsigned fn = 0;
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < nfunc; i++) {
 			uint32_t h = hash(ele, fn++);
-			if (!bits[comp][h]) changed = true;
-			bits[comp][h] = true;
+			set(comp,h);
 		}
 	}
 	return changed;
@@ -84,7 +83,7 @@ bool BloomFilter::contains(unsigned ele) {
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < nfunc; i++) {
 			uint32_t h = hash(ele, fn++);
-			if (!bits[comp][h]) return false;
+			if (!get(comp,h)) return false;
 		}
 	}
 	return true;
@@ -99,7 +98,7 @@ void BloomFilter::dump(void) {
 	cerr << "=> Bloom filter dump (" << bits.size() << " compartments, " << compsize << " bits in each)" << endl;
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
-			if (bits[comp][i]) cerr << "1";
+			if (get(comp,i)) cerr << "1";
 			else cerr << ".";
 			if (i % 80 == 79) cerr << endl;
 		}
@@ -111,7 +110,7 @@ unsigned BloomFilter::popcount(void) {
 	unsigned count = 0;
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
-			if (bits[comp][i]) count++;
+			if (get(comp,i)) count++;
 		}
 	}
 	return count;
@@ -125,7 +124,7 @@ BloomFilter* BloomFilter::intersect(BloomFilter *filter) {
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
 			if (!filter->bits[comp][i])
-			bits[comp][i] = false;
+				reset(comp,i);
 		}
 	}
 	return this;
@@ -135,19 +134,18 @@ BloomFilter* BloomFilter::or_from(BloomFilter *filter) {
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
 			if (filter->bits[comp][i])
-			bits[comp][i] = true;
+				set(comp,i);
 		}
 	}
 	return this;
 }
 
 bool BloomFilter::add(BloomFilter *filter) {
-	bool changed = false;
+	changed = false;
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
-			if (filter->bits[comp][i] && !bits[comp][i]) {
-				bits[comp][i] = true;
-				changed = true;
+			if (filter->bits[comp][i]) {
+				set(comp,i);
 			}
 		}
 	}
@@ -158,7 +156,7 @@ bool BloomFilter::isEmpty(void) {
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		bool empty = true;
 		for (unsigned i = 0; i < compsize; i++) {
-			if (bits[comp][i]) {
+			if (get(comp,i)) {
 				empty = false;
 				break;
 			}
@@ -172,7 +170,7 @@ bool BloomFilter::operator==(const BloomFilter* rhs) {
 	if (ncomp != rhs->ncomp || compsize != rhs->compsize || nfunc != rhs->nfunc) return false;
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
-			if (rhs->bits[comp][i] != bits[comp][i]) return false;
+			if (rhs->get(comp,i) != get(comp,i)) return false;
 		}
 	}
 	return true;
