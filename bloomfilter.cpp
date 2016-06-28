@@ -144,6 +144,19 @@ BloomFilter* BloomFilter::or_from(BloomFilter *filter) {
 	return this;
 }
 
+bool BloomFilter::add(BloomFilter *filter) {
+	bool changed = false;
+	for (unsigned comp = 0; comp < bits.size(); comp++) {
+		for (unsigned i = 0; i < compsize; i++) {
+			if (filter->bits[comp][i] && !bits[comp][i]) {
+				bits[comp][i] = true;
+				changed = true;
+			}
+		}
+	}
+	return changed;
+}
+
 bool BloomFilter::isEmpty(void) {
 	for (unsigned comp = 0; comp < bits.size(); comp++) {
 		bool empty = true;

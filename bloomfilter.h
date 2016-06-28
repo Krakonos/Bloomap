@@ -28,6 +28,7 @@ class BloomFilter {
 		~BloomFilter();
 
 		bool add(unsigned ele);
+		bool add(BloomFilter *filter);
 		bool contains(unsigned ele);
 		void dump(void);
 

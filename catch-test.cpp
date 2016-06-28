@@ -110,6 +110,17 @@ TEST_CASE( "***** Bloomap union.", "[union]" ) {
 		REQUIRE( bloomap_count_elements(map1, c1) == c1.size() );
 	}
 
+	SECTION("--> add() notices if map didn't change") {
+		REQUIRE( map1->add(map2) == false );
+	}
+
+	SECTION("--> add() notices if map did change") {
+		unsigned e = rand();
+		while (map1->contains(e)) e = rand();
+		map2->add(e);
+		REQUIRE( map1->add(map2) == true );
+	}
+
 	/* TODO: check if it's the same map as if the elements were inserted all into one */
 }
 

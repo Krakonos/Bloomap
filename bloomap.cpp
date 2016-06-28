@@ -45,6 +45,10 @@ bool Bloomap::add(unsigned ele) {
 	} else return false;
 }
 
+bool Bloomap::add(Bloomap *map) {
+	return BloomFilter::add(map);
+}
+
 bool Bloomap::contains(unsigned ele) {
 	bool ret = BloomFilter::contains(ele);
 #ifdef DEBUG_STATS
@@ -187,10 +191,9 @@ BloomapIterator& BloomapIterator::operator++() {
 	return *this;
 }
 
-BloomapIterator BloomapIterator::operator++(int count) {
+BloomapIterator BloomapIterator::operator++(int x) {
 	BloomapIterator tmp(*this);
-	for (int i = 0; i < count; i++)
-		operator++();
+	operator++();
 	return tmp;
 }
 

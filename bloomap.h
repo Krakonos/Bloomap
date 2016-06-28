@@ -27,6 +27,7 @@ class Bloomap : public BloomFilter {
 		Bloomap(Bloomap *orig);
 
 		bool add(unsigned ele);
+		bool add(Bloomap *map);
 		bool contains(unsigned ele);
 		void dump(void);
 		void dumpStats(void);
