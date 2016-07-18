@@ -7,6 +7,7 @@
 #include "bloomfilter.h"
 
 #define ELE 1000
+#define ELE_BENCH 1000000
 #define ITER 10
 #define SLACK 1.2
 
@@ -197,5 +198,32 @@ TEST_CASE( "****** Bloomap operator==().", "[operators]" ) {
 		while (map2->contains(e)) e = rand();
 		map2->add(e);
 		REQUIRE(*map1 != map2);
+	}
+}
+
+TEST_CASE( "****** Bloomap speed.", "[benchmark]" ) {
+	BloomapFamily *f = BloomapFamily::forElementsAndProb(ELE_BENCH, 0.01);
+
+	vector<uint64_t> ins_data;
+	for (unsigned i = 0; i < ELE_BENCH; i++)
+		ins_data.push_back(rand());
+	Bloomap* map1 = f->newMap();
+	map<uint64_t,bool> map2;
+	vector<uint64_t> map3;
+
+	SECTION("[bench] Bloomap->add()") {
+		for (unsigned i = 0; i < ins_data.size(); i++) {
+			map1->add( ins_data[i] );
+		}
+	}
+	SECTION("[bench] map->operator[]") {
+		for (unsigned i = 0; i < ins_data.size(); i++) {
+			map2[ins_data[i]] = true;
+		}
+	}
+	SECTION("[bench] vector->push_back") {
+		for (unsigned i = 0; i < ins_data.size(); i++) {
+			map3.push_back(ins_data[i]);
+		}
 	}
 }
