@@ -31,7 +31,6 @@ class Bloomap : public BloomFilter {
 		bool contains(unsigned ele);
 		void dump(void);
 		void dumpStats(void);
-		void clear(void);
 
 		BloomapFamily* family() { return f; }
 

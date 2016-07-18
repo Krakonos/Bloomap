@@ -68,19 +68,11 @@ Bloomap* Bloomap::intersect(Bloomap* map) {
 	return this;
 }
 
-void Bloomap::clear() {
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		for (unsigned i = 0; i < compsize; i++) {
-			bits[comp][i] = false;
-		}
-	}
-}
-
 void Bloomap::purge() {
 	Bloomap orig(this);
 	clear();
 	for (unsigned glob_pos = 0; glob_pos < compsize; glob_pos++) {
-		if (!orig.bits[0][glob_pos]) continue;
+		if (!orig.get(0,glob_pos)) continue;
 		std::set<unsigned> &set = family()->ins_data[glob_pos];
 		for (std::set<unsigned>::const_iterator it = set.begin(); it != set.end(); it++) {
 			unsigned entry = *it;

@@ -14,6 +14,8 @@
 #include <bitset>
 #include <vector>
 
+#define BITS_TYPE unsigned
+
 class BloomFilter {
 	public:
 		BloomFilter(unsigned m, unsigned k);
@@ -31,6 +33,7 @@ class BloomFilter {
 		bool add(BloomFilter *filter);
 		bool contains(unsigned ele);
 		void dump(void);
+		void clear(void);
 
 		/* Helper function to compute hash */
 		unsigned hash(unsigned ele, unsigned i);
@@ -51,26 +54,32 @@ class BloomFilter {
 		bool operator!=(const BloomFilter* rhs);
 
 	protected:
-		unsigned nfunc, compsize, ncomp;
-		std::vector< std::vector<bool> > bits;
+		unsigned nfunc, compsize, ncomp, bits_segsize, bits_size;
+		BITS_TYPE* bits;
 
 		/* The data manipulation functions. The class-wide changed flag is
 		 * used, and has to be reset by it's user. */
 		bool changed;
 		bool inline set(unsigned comp, unsigned bit) {
-			changed |= !bits[comp][bit];
-			bits[comp][bit] = true;
+			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
+			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
+			changed |= !(bits[index] & mask);
+			bits[index] |= mask;
 			return changed;
 		}
 
 		bool inline reset(unsigned comp, unsigned bit) {
-			changed |= bits[comp][bit];
-			bits[comp][bit] = false;
+			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
+			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
+			changed |= bits[index] & mask;
+			bits[index] &= ~mask;
 			return changed;
 		}
 
 		bool inline get(unsigned comp, unsigned bit) const {
-			return bits[comp][bit];
+			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
+			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
+			return bits[index] & mask;
 		}
 
 };
