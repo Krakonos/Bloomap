@@ -1,9 +1,10 @@
 CXXFLAGS=-std=c++98 -g -Wall -DDEBUG_STATS -O2
 CC=g++
+LDFLAGS=-lbenchmark -lpthread
 
 OBJECTS=bloomfilter.o bloomapfamily.o bloomap.o murmur.o
 
-all: tests catch
+all: tests catch benchmark
 
 %.html : %.md
 	asciidoc -o $@ $<
@@ -12,6 +13,10 @@ doc: README.html
 
 catch: catch-test.o catch-main.o $(OBJECTS)
 	$(CC) $(CXXLAGS) -o catch-test $^
+
+benchmark: benchmark.o $(OBJECTS)
+	$(CC) $(CXXLAGS) -o benchmark $^ $(LDFLAGS)
+	./benchmark
 
 check: catch
 	./catch-test -d yes
@@ -36,7 +41,7 @@ B_ORDER ?= 0
 # prefill = 25 ~ 1GB
 B_PREFILL ?= 25
 
-benchmark: test-intersection
+custom-benchmark: test-intersection
 	./test-intersection  1${B_ORDER} 10${B_ORDER} ${B_PR} ${B_ITER} ${B_PREFILL} 2>&1 | grep ::
 	./test-intersection  2${B_ORDER} 10${B_ORDER} ${B_PR} ${B_ITER} ${B_PREFILL} 2>&1 | grep ::
 	./test-intersection  3${B_ORDER} 10${B_ORDER} ${B_PR} ${B_ITER} ${B_PREFILL} 2>&1 | grep ::
@@ -49,7 +54,7 @@ benchmark: test-intersection
 	./test-intersection 10${B_ORDER} 10${B_ORDER} ${B_PR} ${B_ITER} ${B_PREFILL} 2>&1 | grep ::
 
 clean:
-	rm -f test test-intersection *.o *.html
+	rm -f test test-intersection benchmark *.o *.html
 
 
 .PHONY: clean check
