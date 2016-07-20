@@ -109,15 +109,19 @@ static void BloomapCustomArgs( benchmark::internal::Benchmark* b ) {
 	b->ArgPair(1 << 10, 10);
 	b->ArgPair(1 << 10, 50);
 	b->ArgPair(1 << 10, 100);
-	b->ArgPair(1 << 13, 10);
-	b->ArgPair(1 << 13, 50);
-	b->ArgPair(1 << 13, 100);
+	b->ArgPair(1 << 12, 10);
+	b->ArgPair(1 << 12, 50);
+	b->ArgPair(1 << 12, 100);
+	b->ArgPair(1 << 14, 10);
+	b->ArgPair(1 << 14, 50);
+	b->ArgPair(1 << 14, 100);
 }
 
 static void CustomArgs( benchmark::internal::Benchmark* b ) {
 	b->Arg(1 << 8);
 	b->Arg(1 << 10);
-	b->Arg(1 << 13);
+	b->Arg(1 << 12);
+	b->Arg(1 << 14);
 }
 
 BENCHMARK(BM_bloomap_insert)->Apply(BloomapCustomArgs);
