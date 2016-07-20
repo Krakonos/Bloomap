@@ -11,7 +11,8 @@
 
 /* This is static vector of hash functions. There are in fact seeds for the
  * murmur hash function, and are generated in constructor randomly, as needed */
-static std::vector<uint32_t> hash_functions;
+static std::vector<uint32_t> hashfn_a;
+static std::vector<uint32_t> hashfn_b;
 
 /*
  * Create a simple instance, with k compartments, each with it's own hash
@@ -49,10 +50,22 @@ void BloomFilter::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc) {
 	assert(compsize);
 	assert(nfunc);
 
+	/* Round the compsize to the next power of two */
+	for (unsigned i = 0; i < 32; i++) {
+		if (compsize < (1U << i)) {
+			compsize = 1 << i;
+			compsize_shiftbits = 32-i;
+			break;
+		}
+	}
+
 	/* Generate seeds for all the hash functions */
-	while (hash_functions.size() < nfunc*ncomp) {
+	while (hashfn_a.size() < nfunc*ncomp) {
 		/* TODO: Possibly ensure different functions */
-		hash_functions.push_back(rand());
+		unsigned a = rand();
+		while (a == 0) a = rand();
+		hashfn_a.push_back(a);
+		hashfn_b.push_back(rand());
 	}
 
 	/* Generate compartments */
@@ -95,7 +108,10 @@ bool BloomFilter::contains(unsigned ele) {
 }
 
 unsigned BloomFilter::hash(unsigned ele, unsigned i) {
-	return MurmurHash1(ele, hash_functions[i]) % compsize;
+	unsigned p = 767461883;
+	//return (ele*hashfn_a[i] + hashfn_b[i]) >> compsize_shiftbits;
+	return ((ele*hashfn_a[i] + hashfn_b[i]) %p) % compsize;
+	//return MurmurHash1(ele, hash_functions[i]) % compsize;
 }
 
 void BloomFilter::dump(void) {

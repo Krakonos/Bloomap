@@ -39,7 +39,8 @@ bool Bloomap::add(unsigned ele) {
 #ifdef DEBUG_STATS
 	real_contents.insert(ele);
 #endif
-	f->newElement(ele, hash(ele, 0)); /* This can't be conditional, as we need even collided elements! */
+	if (f)
+		f->newElement(ele, hash(ele, 0)); /* This can't be conditional, as we need even collided elements! */
 	if (BloomFilter::add(ele)) {
 		return true;
 	} else return false;
@@ -92,6 +93,10 @@ void Bloomap::dumpStats(void) {
 	std::cerr << "  Map popcount (ratio):   " << popcount()*1.0/mapsize() << std::endl;
 	std::cerr << "  Empty:                  " << (isEmpty() ? "yes" : "no") << std::endl;
 
+}
+
+void Bloomap::splitFamily(void) {
+	f = NULL;
 }
 
 

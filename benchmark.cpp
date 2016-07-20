@@ -26,6 +26,22 @@ static void BM_bloomap_insert( benchmark::State& state ) {
 	}
 }
 
+static void BM_bloomap_nofamily_insert( benchmark::State& state ) {
+	BloomapFamily *f = BloomapFamily::forElementsAndProb(state.range_x(), 1.0/state.range_y());
+	Bloomap *map = f->newMap();
+	map->splitFamily();
+	uint32_t n = 0;
+	uint32_t range = state.range_x();
+	while (state.KeepRunning()) {
+		for (uint32_t i = 0; i < range; i++) {
+			benchmark::DoNotOptimize(map->add(n++));
+		}
+		state.PauseTiming();
+		map->clear();
+		state.ResumeTiming();
+	}
+}
+
 static void BM_stdmap_insert( benchmark::State& state ) {
 	map<uint32_t,bool> map;	
 	uint32_t n = 0;
@@ -86,14 +102,23 @@ static void BM_stdlist_insert( benchmark::State& state ) {
 	}
 }
 
-static void CustomArgs( benchmark::internal::Benchmark* b ) {
+static void BloomapCustomArgs( benchmark::internal::Benchmark* b ) {
+	b->ArgPair(1 << 8, 10);
+	b->ArgPair(1 << 8, 100);
 	b->ArgPair(1 << 10, 10);
 	b->ArgPair(1 << 10, 100);
 	b->ArgPair(1 << 13, 10);
 	b->ArgPair(1 << 13, 100);
 }
 
-BENCHMARK(BM_bloomap_insert)->Apply(CustomArgs);
+static void CustomArgs( benchmark::internal::Benchmark* b ) {
+	b->Arg(1 << 8);
+	b->Arg(1 << 10);
+	b->Arg(1 << 13);
+}
+
+BENCHMARK(BM_bloomap_insert)->Apply(BloomapCustomArgs);
+BENCHMARK(BM_bloomap_nofamily_insert)->Apply(BloomapCustomArgs);
 BENCHMARK(BM_stdmap_insert)->Apply(CustomArgs);
 BENCHMARK(BM_stdset_insert)->Apply(CustomArgs);
 BENCHMARK(BM_stdvector_insert)->Apply(CustomArgs);

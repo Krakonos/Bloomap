@@ -54,7 +54,7 @@ class BloomFilter {
 		bool operator!=(const BloomFilter* rhs);
 
 	protected:
-		unsigned nfunc, compsize, ncomp, bits_segsize, bits_size;
+		unsigned nfunc, compsize, compsize_shiftbits, ncomp, bits_segsize, bits_size;
 		BITS_TYPE* bits;
 
 		/* The data manipulation functions. The class-wide changed flag is
