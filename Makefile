@@ -1,10 +1,10 @@
-CXXFLAGS=-std=c++98 -g -Wall -DDEBUG_STATS -O2
+CXXFLAGS=-std=c++98 -g -Wall -DDEBUG_STATS -O2 -fno-omit-frame-pointer
 CC=g++
-LDFLAGS=-lbenchmark -lpthread
+LDFLAGS=$(CXXFLAGS) -lbenchmark -lpthread
 
 OBJECTS=bloomfilter.o bloomapfamily.o bloomap.o murmur.o
 
-all: tests catch benchmark
+all: tests catch benchmark run-benchmark
 
 %.html : %.md
 	asciidoc -o $@ $<
@@ -16,6 +16,8 @@ catch: catch-test.o catch-main.o $(OBJECTS)
 
 benchmark: benchmark.o $(OBJECTS)
 	$(CC) $(CXXLAGS) -o benchmark $^ $(LDFLAGS)
+
+run-benchmark: benchmark
 	./benchmark
 
 check: catch
