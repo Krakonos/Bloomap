@@ -104,10 +104,13 @@ static void BM_stdlist_insert( benchmark::State& state ) {
 
 static void BloomapCustomArgs( benchmark::internal::Benchmark* b ) {
 	b->ArgPair(1 << 8, 10);
+	b->ArgPair(1 << 8, 50);
 	b->ArgPair(1 << 8, 100);
 	b->ArgPair(1 << 10, 10);
+	b->ArgPair(1 << 10, 50);
 	b->ArgPair(1 << 10, 100);
 	b->ArgPair(1 << 13, 10);
+	b->ArgPair(1 << 13, 50);
 	b->ArgPair(1 << 13, 100);
 }
 
