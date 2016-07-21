@@ -1,31 +1,37 @@
 #include <iostream>
-#include <bitset>
 #include <map>
 #include <vector>
 #include <cassert>
+#include <cstdlib>
+#include <cstring>
 
 #include "murmur.h"
 #include "bloomap.h"
 #include "bloomapfamily.h"
 
-//std::map<unsigned, bool> m;
-
 /* This is static vector of hash functions. There are in fact seeds for the
  * murmur hash function, and are generated in constructor randomly, as needed */
-static std::vector<uint32_t> hash_functions;
-
+static std::vector<uint32_t> hashfn_a;
+static std::vector<uint32_t> hashfn_b;
 
 Bloomap::Bloomap(BloomapFamily* f, unsigned m, unsigned k) :
-	BloomFilter(m, k), f(f)
+	f(f)
 {
+	_init(k, m/k, 1);
 #ifdef DEBUG_STATS
 	resetStats();
 #endif
 }
 
-Bloomap::Bloomap(Bloomap *orig)
-	: BloomFilter(orig)
-{
+Bloomap::Bloomap(Bloomap *orig) {
+
+	_init(orig->ncomp, orig->compsize, orig->nfunc);
+
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned pos = 0; pos < orig->compsize; pos++) {
+			bits[comp*bits_segsize + pos] = orig->bits[comp*bits_segsize + pos];
+		}
+	}
 }
 
 #ifdef DEBUG_STATS
@@ -41,17 +47,47 @@ bool Bloomap::add(unsigned ele) {
 #endif
 	if (f)
 		f->newElement(ele, hash(ele, 0)); /* This can't be conditional, as we need even collided elements! */
-	if (BloomFilter::add(ele)) {
-		return true;
-	} else return false;
+
+	changed = false;
+	/* Set appropriate bits in each container */
+	unsigned fn = 0;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < nfunc; i++) {
+			uint32_t h = hash(ele, fn++);
+			set(comp,h);
+		}
+	}
+	return changed;
 }
 
+
 bool Bloomap::add(Bloomap *map) {
-	return BloomFilter::add(map);
+	changed = false;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < bits_segsize; i++) {
+			unsigned index = comp*bits_segsize + i;
+			if ((bits[index] & map->bits[index]) != map->bits[index]) {
+				changed = true;
+				bits[index] |= map->bits[index];
+			}
+		}
+	}
+	return changed;
 }
 
 bool Bloomap::contains(unsigned ele) {
-	bool ret = BloomFilter::contains(ele);
+	bool ret = true;
+	unsigned fn = 0;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < nfunc; i++) {
+			uint32_t h = hash(ele, fn++);
+			if (!get(comp,h)) {
+				ret = false;
+				goto stat_and_ret;
+			}
+		}
+	}
+	stat_and_ret:
 #ifdef DEBUG_STATS
 	counter_query++;
 	if (ret && !real_contents.count(ele))
@@ -60,12 +96,12 @@ bool Bloomap::contains(unsigned ele) {
 	return ret;
 }
 
-void Bloomap::dump(void) {
-	BloomFilter::dump();
-}
-
 Bloomap* Bloomap::intersect(Bloomap* map) {
-	BloomFilter::intersect(map);
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < bits_segsize; i++) {
+			bits[comp*bits_segsize + i] &= map->bits[comp*bits_segsize + i];
+		}
+	}
 	return this;
 }
 
@@ -104,11 +140,18 @@ void Bloomap::splitFamily(void) {
 
 bool Bloomap::operator==(const Bloomap* rhs) {
 	/* Trivial cases */
+	if (rhs == NULL) return false;
 	if (this == rhs) return true;
 	if (f != rhs->f) return false;
 
-	/* We have to check the bits.. */
-	return BloomFilter::operator==(rhs);
+	/* If this passes, let's check the bits */
+	if (ncomp != rhs->ncomp || compsize != rhs->compsize || nfunc != rhs->nfunc) return false;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < bits_segsize; i++) {
+			if (rhs->bits[comp*bits_segsize + i] != bits[comp*bits_segsize + i]) return false;
+		}
+	}
+	return true;
 }
 
 bool Bloomap::operator!=(const Bloomap* rhs) {
@@ -207,4 +250,106 @@ unsigned BloomapIterator::operator*() {
 	/* We need to make sure the iterator works even if not valid, for the foreach macros to work properly. */
 	if (isValid()) return *set_iterator;
 	else return 0;
+}
+
+bool Bloomap::isEmpty(void) {
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		bool empty = true;
+		for (unsigned i = 0; i < bits_segsize; i++) {
+			if (bits[comp*bits_segsize + i]) {
+				empty = false;
+				break;
+			}
+		}
+		if (empty) return true;
+	}
+	return false;
+}
+
+
+/****************
+ * Migrated from BloomFilter 
+ ****************/
+
+void Bloomap::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc) {
+	ncomp = _ncomp;
+	compsize = _compsize;
+	nfunc = _nfunc;
+
+	assert(ncomp);
+	assert(compsize);
+	assert(nfunc);
+
+	/* Round the compsize to the next power of two */
+	for (unsigned i = 0; i < 32; i++) {
+		if (compsize < (1U << i)) {
+			compsize = 1 << i;
+			compsize_shiftbits = 32-i;
+			break;
+		}
+	}
+
+	/* Generate seeds for all the hash functions */
+	while (hashfn_a.size() < nfunc*ncomp) {
+		/* TODO: Possibly ensure different functions */
+		unsigned a = rand();
+		while (a == 0) a = rand();
+		hashfn_a.push_back(a);
+		hashfn_b.push_back(rand());
+	}
+
+	/* Generate compartments */
+	bits_segsize = (compsize / sizeof(BITS_TYPE))+1;
+	bits_size = bits_segsize*ncomp;
+	bits = new BITS_TYPE[bits_size];
+	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
+}
+
+void Bloomap::clear(void) {
+	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
+}
+
+
+unsigned Bloomap::hash(unsigned ele, unsigned i) {
+	unsigned p = 767461883;
+	//return (ele*hashfn_a[i] + hashfn_b[i]) >> compsize_shiftbits;
+	return ((ele*hashfn_a[i] + hashfn_b[i]) %p) % compsize;
+	//return MurmurHash1(ele, hash_functions[i]) % compsize;
+}
+
+void Bloomap::dump(void) {
+	using namespace std;
+	cerr << "=> Bloom filter dump (" << ncomp << " compartments, " << compsize << " bits in each)" << endl;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < compsize; i++) {
+			if (get(comp,i)) cerr << "1";
+			else cerr << ".";
+			if (i % 80 == 79) cerr << endl;
+		}
+		cerr << endl << "=======================" << endl;
+	}
+}
+
+unsigned Bloomap::popcount(void) {
+	unsigned count = 0;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < compsize; i++) {
+			if (get(comp,i)) count++;
+		}
+	}
+	return count;
+}
+
+unsigned Bloomap::mapsize(void) {
+	return bits_size*sizeof(BITS_TYPE);
+}
+
+Bloomap* Bloomap::or_from(Bloomap *filter) {
+	changed = false;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < bits_segsize; i++) {
+			bits[comp*bits_segsize + i] |= filter->bits[comp*bits_segsize + i];
+		}
+	}
+	return this;
 }

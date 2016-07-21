@@ -21,24 +21,36 @@
 
 class BloomapFamily;
 
-class Bloomap : public BloomFilter {
+class Bloomap {
 	public:
 		Bloomap(BloomapFamily* f, unsigned m, unsigned k);
 		Bloomap(Bloomap *orig);
+		void _init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc);
 
 		bool add(unsigned ele);
 		bool add(Bloomap *map);
 		bool contains(unsigned ele);
 		void dump(void);
 		void dumpStats(void);
+		void clear(void);
 		void splitFamily(void);
+
+		/* Helper function to compute hash */
+		unsigned hash(unsigned ele, unsigned i);
+
+		/* Returns number of bits set in filter */
+		unsigned popcount(void);
+
+		/* Returns the size of map in bits (ignoring all overhead) */
+		unsigned mapsize(void);
+
+		/* Checks if the filter is empty */
+		bool isEmpty(void);
 
 		BloomapFamily* family() { return f; }
 
-		/* Logic functions available. These might be provided as operators in
-		 * the future. */
 		Bloomap* intersect(Bloomap* map);
-		//Bloomap* unite(Bloomap* map);
+		Bloomap* or_from(Bloomap *filter);
 
 		bool operator==(const Bloomap* rhs);
 		bool operator!=(const Bloomap* rhs);
@@ -46,7 +58,34 @@ class Bloomap : public BloomFilter {
 		void purge();
 
 	protected:
+		unsigned nfunc, compsize, compsize_shiftbits, ncomp, bits_segsize, bits_size;
 		BloomapFamily *f;
+		BITS_TYPE* bits;
+
+		/* The data manipulation functions. The class-wide changed flag is
+		 * used, and has to be reset by it's user. */
+		bool changed;
+		bool inline set(unsigned comp, unsigned bit) {
+			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
+			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
+			changed |= !(bits[index] & mask);
+			bits[index] |= mask;
+			return changed;
+		}
+
+		bool inline reset(unsigned comp, unsigned bit) {
+			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
+			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
+			changed |= bits[index] & mask;
+			bits[index] &= ~mask;
+			return changed;
+		}
+
+		bool inline get(unsigned comp, unsigned bit) const {
+			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
+			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
+			return bits[index] & mask;
+		}
 
 	friend class BloomapIterator;
 #ifdef DEBUG_STATS

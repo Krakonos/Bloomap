@@ -3,7 +3,7 @@ CXXFLAGS=-std=c++98 -g -Wall -O2 -fno-omit-frame-pointer
 CC=g++
 LDFLAGS=$(CXXFLAGS) -lbenchmark -lpthread
 
-OBJECTS=bloomfilter.o bloomapfamily.o bloomap.o murmur.o
+OBJECTS=bloomapfamily.o bloomap.o
 
 all: benchmark run-benchmark
 
