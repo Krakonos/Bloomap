@@ -27,40 +27,42 @@ class Bloomap {
 		Bloomap(Bloomap *orig);
 		void _init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc);
 
+		/* Most common operations */
 		bool add(unsigned ele);
 		bool add(Bloomap *map);
 		bool contains(unsigned ele);
-		void dump(void);
-		void dumpStats(void);
+		bool isEmpty(void);
 		void clear(void);
+		Bloomap* intersect(Bloomap* map);
+		Bloomap* or_from(Bloomap *filter);
+
+		/* Purges the map according to the family records. */
+		void purge();
+
+		/* Split this map from the family. 
+		 * Can not be reversed! */
 		void splitFamily(void);
 
 		/* Helper function to compute hash */
 		unsigned hash(unsigned ele, unsigned i);
 
-		/* Returns number of bits set in filter */
-		unsigned popcount(void);
-
-		/* Returns the size of map in bits (ignoring all overhead) */
-		unsigned mapsize(void);
-
-		/* Checks if the filter is empty */
-		bool isEmpty(void);
-
 		BloomapFamily* family() { return f; }
 
-		Bloomap* intersect(Bloomap* map);
-		Bloomap* or_from(Bloomap *filter);
-
+		/* Comparison operators */
 		bool operator==(const Bloomap* rhs);
 		bool operator!=(const Bloomap* rhs);
 
-		void purge();
+		/* Debugging and slow stuff */
+		void dump(void);
+		void dumpStats(void);
+		unsigned popcount(void);
+		unsigned mapsize(void);
 
 	protected:
 		unsigned nfunc, compsize, compsize_shiftbits, ncomp, bits_segsize, bits_size;
 		BloomapFamily *f;
 		BITS_TYPE* bits;
+		BITS_TYPE* side_index;
 
 		/* The data manipulation functions. The class-wide changed flag is
 		 * used, and has to be reset by it's user. */

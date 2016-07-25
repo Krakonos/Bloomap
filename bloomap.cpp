@@ -14,8 +14,7 @@
 static std::vector<uint32_t> hashfn_a;
 static std::vector<uint32_t> hashfn_b;
 
-Bloomap::Bloomap(BloomapFamily* f, unsigned m, unsigned k) :
-	f(f)
+Bloomap::Bloomap(BloomapFamily* f, unsigned m, unsigned k) : f(f)
 {
 	_init(k, m/k, 1);
 #ifdef DEBUG_STATS
@@ -34,12 +33,39 @@ Bloomap::Bloomap(Bloomap *orig) {
 	}
 }
 
-#ifdef DEBUG_STATS
-void Bloomap::resetStats(void) {
-	counter_fp = 0;
-	counter_query = 0;
+void Bloomap::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc) {
+	ncomp = _ncomp;
+	compsize = _compsize;
+	nfunc = _nfunc;
+
+	assert(ncomp);
+	assert(compsize);
+	assert(nfunc);
+
+	/* Round the compsize to the next power of two */
+	for (unsigned i = 0; i < 32; i++) {
+		if (compsize < (1U << i)) {
+			compsize = 1 << i;
+			compsize_shiftbits = 32-i;
+			break;
+		}
+	}
+
+	/* Generate seeds for all the hash functions */
+	while (hashfn_a.size() < nfunc*ncomp) {
+		/* TODO: Possibly ensure different functions */
+		unsigned a = rand();
+		while (a == 0) a = rand();
+		hashfn_a.push_back(a);
+		hashfn_b.push_back(rand());
+	}
+
+	/* Generate compartments */
+	bits_segsize = (compsize / sizeof(BITS_TYPE))+1;
+	bits_size = bits_segsize*ncomp;
+	bits = new BITS_TYPE[bits_size];
+	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
 }
-#endif
 
 bool Bloomap::add(unsigned ele) {
 #ifdef DEBUG_STATS
@@ -59,7 +85,6 @@ bool Bloomap::add(unsigned ele) {
 	}
 	return changed;
 }
-
 
 bool Bloomap::add(Bloomap *map) {
 	changed = false;
@@ -96,10 +121,38 @@ bool Bloomap::contains(unsigned ele) {
 	return ret;
 }
 
+bool Bloomap::isEmpty(void) {
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		bool empty = true;
+		for (unsigned i = 0; i < bits_segsize; i++) {
+			if (bits[comp*bits_segsize + i]) {
+				empty = false;
+				break;
+			}
+		}
+		if (empty) return true;
+	}
+	return false;
+}
+
+void Bloomap::clear(void) {
+	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
+}
+
 Bloomap* Bloomap::intersect(Bloomap* map) {
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		for (unsigned i = 0; i < bits_segsize; i++) {
 			bits[comp*bits_segsize + i] &= map->bits[comp*bits_segsize + i];
+		}
+	}
+	return this;
+}
+
+Bloomap* Bloomap::or_from(Bloomap *filter) {
+	changed = false;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < bits_segsize; i++) {
+			bits[comp*bits_segsize + i] |= filter->bits[comp*bits_segsize + i];
 		}
 	}
 	return this;
@@ -122,6 +175,37 @@ void Bloomap::purge() {
 	}
 }
 
+void Bloomap::splitFamily(void) {
+	f = NULL;
+}
+
+unsigned Bloomap::hash(unsigned ele, unsigned i) {
+	unsigned p = 767461883;
+	//return (ele*hashfn_a[i] + hashfn_b[i]) >> compsize_shiftbits;
+	return ((ele*hashfn_a[i] + hashfn_b[i]) %p) % compsize;
+	//return MurmurHash1(ele, hash_functions[i]) % compsize;
+}
+
+#ifdef DEBUG_STATS
+void Bloomap::resetStats(void) {
+	counter_fp = 0;
+	counter_query = 0;
+}
+#endif
+
+void Bloomap::dump(void) {
+	using namespace std;
+	cerr << "=> Bloom filter dump (" << ncomp << " compartments, " << compsize << " bits in each)" << endl;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < compsize; i++) {
+			if (get(comp,i)) cerr << "1";
+			else cerr << ".";
+			if (i % 80 == 79) cerr << endl;
+		}
+		cerr << endl << "=======================" << endl;
+	}
+}
+
 void Bloomap::dumpStats(void) {
 	std::cerr << "  Map compartments:       " << ncomp << std::endl;
 	std::cerr << "  Map size (in bits):     " << mapsize() << std::endl;
@@ -131,10 +215,19 @@ void Bloomap::dumpStats(void) {
 
 }
 
-void Bloomap::splitFamily(void) {
-	f = NULL;
+unsigned Bloomap::popcount(void) {
+	unsigned count = 0;
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		for (unsigned i = 0; i < compsize; i++) {
+			if (get(comp,i)) count++;
+		}
+	}
+	return count;
 }
 
+unsigned Bloomap::mapsize(void) {
+	return bits_size*sizeof(BITS_TYPE);
+}
 
 /* Bloomap operators */
 
@@ -158,7 +251,7 @@ bool Bloomap::operator!=(const Bloomap* rhs) {
 	return !operator==(rhs);
 }
 
-/* Iterator stuff */
+/* Bloomap iterators */
 
 BloomapIterator begin(Bloomap *map) {
 	return BloomapIterator(map, false);
@@ -252,104 +345,3 @@ unsigned BloomapIterator::operator*() {
 	else return 0;
 }
 
-bool Bloomap::isEmpty(void) {
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		bool empty = true;
-		for (unsigned i = 0; i < bits_segsize; i++) {
-			if (bits[comp*bits_segsize + i]) {
-				empty = false;
-				break;
-			}
-		}
-		if (empty) return true;
-	}
-	return false;
-}
-
-
-/****************
- * Migrated from BloomFilter 
- ****************/
-
-void Bloomap::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc) {
-	ncomp = _ncomp;
-	compsize = _compsize;
-	nfunc = _nfunc;
-
-	assert(ncomp);
-	assert(compsize);
-	assert(nfunc);
-
-	/* Round the compsize to the next power of two */
-	for (unsigned i = 0; i < 32; i++) {
-		if (compsize < (1U << i)) {
-			compsize = 1 << i;
-			compsize_shiftbits = 32-i;
-			break;
-		}
-	}
-
-	/* Generate seeds for all the hash functions */
-	while (hashfn_a.size() < nfunc*ncomp) {
-		/* TODO: Possibly ensure different functions */
-		unsigned a = rand();
-		while (a == 0) a = rand();
-		hashfn_a.push_back(a);
-		hashfn_b.push_back(rand());
-	}
-
-	/* Generate compartments */
-	bits_segsize = (compsize / sizeof(BITS_TYPE))+1;
-	bits_size = bits_segsize*ncomp;
-	bits = new BITS_TYPE[bits_size];
-	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
-}
-
-void Bloomap::clear(void) {
-	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
-}
-
-
-unsigned Bloomap::hash(unsigned ele, unsigned i) {
-	unsigned p = 767461883;
-	//return (ele*hashfn_a[i] + hashfn_b[i]) >> compsize_shiftbits;
-	return ((ele*hashfn_a[i] + hashfn_b[i]) %p) % compsize;
-	//return MurmurHash1(ele, hash_functions[i]) % compsize;
-}
-
-void Bloomap::dump(void) {
-	using namespace std;
-	cerr << "=> Bloom filter dump (" << ncomp << " compartments, " << compsize << " bits in each)" << endl;
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		for (unsigned i = 0; i < compsize; i++) {
-			if (get(comp,i)) cerr << "1";
-			else cerr << ".";
-			if (i % 80 == 79) cerr << endl;
-		}
-		cerr << endl << "=======================" << endl;
-	}
-}
-
-unsigned Bloomap::popcount(void) {
-	unsigned count = 0;
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		for (unsigned i = 0; i < compsize; i++) {
-			if (get(comp,i)) count++;
-		}
-	}
-	return count;
-}
-
-unsigned Bloomap::mapsize(void) {
-	return bits_size*sizeof(BITS_TYPE);
-}
-
-Bloomap* Bloomap::or_from(Bloomap *filter) {
-	changed = false;
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		for (unsigned i = 0; i < bits_segsize; i++) {
-			bits[comp*bits_segsize + i] |= filter->bits[comp*bits_segsize + i];
-		}
-	}
-	return this;
-}
