@@ -11,21 +11,22 @@
 #define __BLOOMAP_H__
 
 #include <stdint.h>
-#include <bitset>
 #include <vector>
 #include <set>
 #include <iterator>
 
 #include "bloomfilter.h"
-
+#include "bloomapfamily.h"
 
 class BloomapFamily;
+class BloomapFamilyIterator;
 
 class Bloomap {
 	public:
-		Bloomap(BloomapFamily* f, unsigned m, unsigned k);
+		Bloomap(BloomapFamily* f, unsigned m, unsigned k, unsigned index_logsize);
 		Bloomap(Bloomap *orig);
-		void _init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc);
+		~Bloomap();
+		void _init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc, unsigned _index_logsize);
 
 		/* Most common operations */
 		bool add(unsigned ele);
@@ -62,7 +63,11 @@ class Bloomap {
 		unsigned nfunc, compsize, compsize_shiftbits, ncomp, bits_segsize, bits_size;
 		BloomapFamily *f;
 		BITS_TYPE* bits;
+
+		/* Side index, only used if part of a family */
 		BITS_TYPE* side_index;
+		unsigned index_logsize;
+		unsigned index_size;
 
 		/* The data manipulation functions. The class-wide changed flag is
 		 * used, and has to be reset by it's user. */
@@ -114,14 +119,18 @@ class BloomapIterator : public std::iterator<std::input_iterator_tag, unsigned >
 		bool operator!=(const BloomapIterator& rhs);
 		unsigned operator*();
 		bool isValid(void);
+		bool atEnd(void);
 
 //		BloomapIterator(const BloomapIterator& mit) : p(mit.p) {}
 
 	protected:
 		Bloomap* map;
-		unsigned glob_pos; /* A position in the global vector of sets. */
-		std::set<unsigned>::iterator set_iterator;
-		bool advanceSetIterator(void);
+		unsigned current_hash; /* A position in the global vector of sets. */
+		bool flagAtEnd;
+
+		BloomapFamilyIterator chi; /* current_hash_iterator */
+		bool advanceHashIterator(void);
+		bool findNextHash(void);
 };
 
 BloomapIterator begin(Bloomap *map);

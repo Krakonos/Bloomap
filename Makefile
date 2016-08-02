@@ -1,4 +1,4 @@
-#CXXFLAGS=-std=c++98 -g -Wall -DDEBUG_STATS -O2 -fno-omit-frame-pointer
+#CXXFLAGS=-std=c++98 -g -Wall -DDEBUG_STATS -O3 -fno-omit-frame-pointer
 CXXFLAGS=-std=c++98 -g -Wall -O2 -fno-omit-frame-pointer
 CC=g++
 LDFLAGS=$(CXXFLAGS) -lbenchmark -lpthread
@@ -7,16 +7,20 @@ OBJECTS=bloomapfamily.o bloomap.o
 
 all: benchmark run-benchmark
 
+bang: bang.cpp $(OBJECTS)
+	$(CC) -o $@ $(CXXFLAGS) -std=c++11 $^
+
+
 %.html : %.md
 	asciidoc -o $@ $<
 
 doc: README.html
 
 catch: catch-test.o catch-main.o $(OBJECTS)
-	$(CC) $(CXXLAGS) -o catch-test $^
+	$(CC) $(CXXFLAGS) -o catch-test $^
 
 benchmark: benchmark.o $(OBJECTS)
-	$(CC) $(CXXLAGS) -o benchmark $^ $(LDFLAGS)
+	$(CC) $(CXXFLAGS) -o benchmark $^ $(LDFLAGS)
 
 run-benchmark: benchmark
 	./benchmark

@@ -1,6 +1,8 @@
 #include <catch/catch.hpp>
 #include <vector>
 #include <map>
+#include <iostream>
+#include <cassert>
 
 #include "bloomap.h"
 #include "bloomapfamily.h"
@@ -21,6 +23,7 @@ Contents bloomap_fill(Bloomap* map, unsigned count, unsigned seed = 0) {
 		unsigned e = rand();
 		while (insert.count(e)) e = rand(); /* Don't insert value twice */
 		map->add( e );
+		assert(map->contains(e));
 		insert[e] = true;
 	}
 	return insert;
@@ -69,6 +72,10 @@ TEST_CASE( "****** Elementary Bloomap operations." ) {
 	REQUIRE (map1 != NULL);
 
 	REQUIRE (map1->popcount() == 0);
+
+	SECTION("--> empty map does not contain elements") {
+		REQUIRE( !map1->contains(666) );
+	}
 
 	SECTION("--> fill with random elements and check them") {
 		for (unsigned i = 0; i < ITER; i++) {
@@ -137,10 +144,83 @@ TEST_CASE( "***** Bloomap union.", "[union]" ) {
 	/* TODO: check if it's the same map as if the elements were inserted all into one */
 }
 
+TEST_CASE( "***** Bloomap intersection.", "[intersection]" ) {
+	BloomapFamily *f = BloomapFamily::forElementsAndProb(ELE, 0.01);
+	Bloomap* map1 = f->newMap();
+	Bloomap* map2 = f->newMap();
+	Bloomap* map3 = f->newMap();
+	Bloomap* mapi = f->newMap();
+
+	REQUIRE (map1 != NULL);
+	REQUIRE (map2 != NULL);
+	REQUIRE (mapi != NULL);
+
+	REQUIRE (map1->popcount() == 0);
+	REQUIRE (map2->popcount() == 0);
+	REQUIRE (mapi->popcount() == 0);
+
+	Contents c1 = bloomap_fill(map1, ELE/2);
+	Contents c2 = bloomap_fill(map2, ELE/2);
+
+	/* Add known intersecting elements */
+	unsigned known_element = 666;
+	map1->add( known_element );
+	map2->add( known_element );
+
+	/* Find an element NOT in map2, and insert it into map1. */
+	unsigned non_intersecting = gen_element(map2);
+	map1->add(non_intersecting);
+
+	/* Copy map1 into mapi, and intersect */
+	mapi->add(map1);
+	mapi->intersect(map2);
+
+	SECTION("--> Elements contained in intersection are indeed in both maps") {
+		unsigned missing_elements = 0;
+		for (Contents::iterator it = c1.begin(); it != c1.end(); ++it) {
+			if (!mapi->contains((*it).first)) continue;
+			if (!map2->contains((*it).first)) continue;
+			missing_elements++;
+		}
+		REQUIRE( missing_elements == 0 );
+	}
+
+	SECTION("--> Known element is in the intersection.") {
+		REQUIRE( mapi->contains(known_element) );
+	}
+
+	SECTION("--> Known element not in map2 is NOT in intersection.") {
+		REQUIRE( !map2->contains(non_intersecting) );
+		REQUIRE( !mapi->contains(non_intersecting) );
+	}
+
+	SECTION("--> Intersection with empty map yields empty map." ) {
+		mapi->intersect(map3);
+		REQUIRE( mapi->popcount() == 0 );
+
+	}
+}
+
+TEST_CASE( "****** BloomapFamily iterator.", "[operators]" ) {
+	BloomapFamily *f = BloomapFamily::forElementsAndProb(ELE, 0.01);
+
+	Bloomap* map1 = f->newMap();
+	map1->add(0U);
+	map1->add(1);
+	map1->add(255);
+	map1->add(666);
+	map1->add(3333);
+
+	for (BloomapFamilyIterator it = f->begin(0); !it.atEnd(); ++it) {
+	//	std::cerr << "Candidate: " << *it << std::endl;
+	}
+
+}
+
 TEST_CASE( "****** Bloomap iterator.", "[operators]" ) {
 	BloomapFamily *f = BloomapFamily::forElementsAndProb(ELE, 0.01);
 
-	bloomap_messup(f, 10);
+	//bloomap_messup(f, 10);
 
 	Bloomap* map1 = f->newMap();
 
@@ -161,9 +241,16 @@ TEST_CASE( "****** Bloomap iterator.", "[operators]" ) {
 		found++;
 		if (c.count(e)) {
 			found_from_c++;
+			c[e] = false;
 		}
-		if (!map1->contains(e)) 
+		if (!map1->contains(e)) {
 			found_not_in_map++;
+		}
+	}
+
+	for (Contents::iterator it = c.begin(); it != c.end(); ++it) {
+		if ((*it).second)
+			std::cerr << "Missing: " << (*it).first << std::endl;
 	}
 
 	REQUIRE( found_from_c == c.size() );

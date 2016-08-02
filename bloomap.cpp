@@ -14,9 +14,10 @@
 static std::vector<uint32_t> hashfn_a;
 static std::vector<uint32_t> hashfn_b;
 
-Bloomap::Bloomap(BloomapFamily* f, unsigned m, unsigned k) : f(f)
+Bloomap::Bloomap(BloomapFamily* f, unsigned m, unsigned k, unsigned index_logsize)
+	: f(f)
 {
-	_init(k, m/k, 1);
+	_init(k, m/k, 1, index_logsize);
 #ifdef DEBUG_STATS
 	resetStats();
 #endif
@@ -24,7 +25,7 @@ Bloomap::Bloomap(BloomapFamily* f, unsigned m, unsigned k) : f(f)
 
 Bloomap::Bloomap(Bloomap *orig) {
 
-	_init(orig->ncomp, orig->compsize, orig->nfunc);
+	_init(orig->ncomp, orig->compsize, orig->nfunc, orig->index_logsize);
 
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		for (unsigned pos = 0; pos < orig->compsize; pos++) {
@@ -33,10 +34,11 @@ Bloomap::Bloomap(Bloomap *orig) {
 	}
 }
 
-void Bloomap::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc) {
+void Bloomap::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc, unsigned _index_logsize) {
 	ncomp = _ncomp;
 	compsize = _compsize;
 	nfunc = _nfunc;
+	index_logsize = _index_logsize;
 
 	assert(ncomp);
 	assert(compsize);
@@ -65,14 +67,34 @@ void Bloomap::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc) {
 	bits_size = bits_segsize*ncomp;
 	bits = new BITS_TYPE[bits_size];
 	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
+
+	/* Allocate the side index if in family */
+	if (f) {
+		index_size = ((1 << index_logsize) / (sizeof(BITS_TYPE)*8))+1;
+		//std::cerr << "Index size=" << index_size << std::endl;
+		side_index = new BITS_TYPE[index_size];
+		memset(side_index, 0, index_size*sizeof(BITS_TYPE));
+	} else
+		side_index = NULL;
+}
+
+Bloomap::~Bloomap() {
+	delete[] bits;
+	delete[] side_index;
 }
 
 bool Bloomap::add(unsigned ele) {
 #ifdef DEBUG_STATS
 	real_contents.insert(ele);
 #endif
-	if (f)
-		f->newElement(ele, hash(ele, 0)); /* This can't be conditional, as we need even collided elements! */
+	unsigned last_index_hash = 0;
+	if (f) {
+		last_index_hash = f->newElement(ele);
+		assert(last_index_hash < (1U << index_logsize));
+		unsigned side_i = last_index_hash / (sizeof(BITS_TYPE)*8);
+		side_index[side_i] |= 1 << (last_index_hash % (sizeof(BITS_TYPE)*8) );
+		//std::cerr << "side_index[" << side_i << "] |= " << (1 << (last_index_hash % (sizeof(BITS_TYPE)*8) )) << std::endl;
+	}
 
 	changed = false;
 	/* Set appropriate bits in each container */
@@ -161,17 +183,9 @@ Bloomap* Bloomap::or_from(Bloomap *filter) {
 void Bloomap::purge() {
 	Bloomap orig(this);
 	clear();
-	for (unsigned glob_pos = 0; glob_pos < compsize; glob_pos++) {
-		if (!orig.get(0,glob_pos)) continue;
-		std::set<unsigned> &set = family()->ins_data[glob_pos];
-		for (std::set<unsigned>::const_iterator it = set.begin(); it != set.end(); it++) {
-			unsigned entry = *it;
-			if (orig.contains(entry))
-				add(entry);
-			else {
-				/* TODO: Count some statistics about purged elements */
-			}
-		}
+	for (BloomapIterator it = begin(this); !it.atEnd(); ++it) {
+		if (orig.contains(*it))
+			add(*it);
 	}
 }
 
@@ -263,8 +277,8 @@ BloomapIterator end(Bloomap *map) {
 
 BloomapIterator::BloomapIterator(const BloomapIterator& orig) {
 	map = orig.map;
-	glob_pos = orig.glob_pos;
-	set_iterator = orig.set_iterator;
+	current_hash = orig.current_hash;
+	chi = orig.chi;
 }
 
 BloomapIterator::BloomapIterator(Bloomap *map, bool end) {
@@ -274,16 +288,12 @@ BloomapIterator::BloomapIterator(Bloomap *map, bool end) {
 void BloomapIterator::_init(Bloomap *_map, bool end) {
 	map = _map;
 	/* We are creating the "end" iterator */
-	if (end) {
-		glob_pos = map->compsize-1;
-		set_iterator = map->family()->ins_data[map->compsize-1].end();
-	} else {
-		glob_pos = 0;
-		set_iterator = map->family()->ins_data[0].begin();
-
-		/* Check if the first element is in the map, otherwise call ++ to find one. */
-		if (set_iterator == map->family()->ins_data[0].end() || !map->contains(*set_iterator))
-			operator++();
+	flagAtEnd = end;
+	current_hash = 0;
+	if (!flagAtEnd) {
+		if (map->side_index[0] & 1)
+			chi = map->family()->begin(current_hash);
+		else findNextHash();
 	}
 }
 
@@ -293,33 +303,64 @@ BloomapIterator::BloomapIterator(Bloomap *map, unsigned& first)
 	first = operator*();
 }
 
+bool BloomapIterator::atEnd(void) {
+	return flagAtEnd;
+}
+
 bool BloomapIterator::isValid(void) {
-	return !(set_iterator == map->family()->ins_data[glob_pos].end());
+	return !chi.atEnd();
 }
 
 /* Advance the iterator and return true if it's dereferencable */
-bool BloomapIterator::advanceSetIterator(void) {
+bool BloomapIterator::advanceHashIterator(void) {
 	if (isValid())
-		set_iterator++;
+		chi++;
 	/* Return false if the iterator changed to past-the-end as well! */
 	return isValid();
+}
+
+bool BloomapIterator::findNextHash(void) {
+	unsigned side_i, side_mask;
+	do {
+		current_hash++;
+		side_i = current_hash / (sizeof(BITS_TYPE)*8);
+		//std::cerr << "Scanning hash: " << current_hash << ", index: " << side_i << std::endl;
+		if (side_i >= map->index_size) {
+			//std::cerr << "Ended: " << side_i << std::endl;
+			flagAtEnd = true;
+			return false; /* There is no next hash */
+		}
+		side_mask = (1 << (current_hash % (sizeof(BITS_TYPE)*8) ));
+		/* We are at the first bit, check if the byte is empty */
+		if ((side_mask == 1) && (map->side_index[side_i] == 0)) {
+			/* The -1 is here to compensate current_hash++ at the start of the loop. */
+			current_hash += sizeof(BITS_TYPE)*8-1;
+		//	std::cerr << "Skipping empty block." << std::endl;
+		}
+	} while ((map->side_index[side_i] & side_mask) == 0 );
+	//std::cerr << "Found next hash: " << current_hash << std::endl;
+	chi = map->f->begin(current_hash);
+	return true;
 }
 
 BloomapIterator& BloomapIterator::operator++() {
 	while (1) {
 		/* Advance the iterator. If it's dereferenceable, check if it's in the map. Otherwise continue to the next element. */
-		if (advanceSetIterator()) {
-			if (map->contains(*set_iterator)) return *this;
+		if (advanceHashIterator()) {
+			if (map->contains(*chi)) return *this;
 			else continue;
 		}
 
-		/* Now the iterator is invalid. If it's in the last set, abort now. */
-		if (glob_pos == (map->compsize-1)) return *this;
-
-		/* Allright, there is at least one set to explore. Jum to it. */
-		glob_pos++;
-		set_iterator = map->family()->ins_data[glob_pos].begin();
-		if (isValid() && map->contains(*set_iterator)) return *this;
+		/* If chi is at end, find next hash. If even this fails, set flag and exit.  */
+		if (chi.atEnd() && (!findNextHash())) {
+			//std::cerr << "++ end." << std::endl;
+			flagAtEnd = true;
+			break;
+		} else {
+			/* The chi is either not at the end, or we have found next hash.
+			 * Check the first element before we iterate further. */
+			if (map->contains(*chi)) return *this;
+		}
 	}
 	return *this;
 }
@@ -331,7 +372,8 @@ BloomapIterator BloomapIterator::operator++(int x) {
 }
 
 bool BloomapIterator::operator==(const BloomapIterator& rhs) {
-	return (map == rhs.map && glob_pos == rhs.glob_pos && set_iterator == rhs.set_iterator);
+	if (flagAtEnd && rhs.flagAtEnd) return true;
+	return (map == rhs.map && current_hash == rhs.current_hash && chi == rhs.chi);
 }
 
 bool BloomapIterator::operator!=(const BloomapIterator& rhs) {
@@ -341,7 +383,7 @@ bool BloomapIterator::operator!=(const BloomapIterator& rhs) {
 
 unsigned BloomapIterator::operator*() {
 	/* We need to make sure the iterator works even if not valid, for the foreach macros to work properly. */
-	if (isValid()) return *set_iterator;
-	else return 0;
+	if (isValid()) return *chi;
+	else return 6666;
 }
 
