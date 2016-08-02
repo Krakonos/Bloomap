@@ -110,13 +110,10 @@ bool Bloomap::add(unsigned ele) {
 
 bool Bloomap::add(Bloomap *map) {
 	changed = false;
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		for (unsigned i = 0; i < bits_segsize; i++) {
-			unsigned index = comp*bits_segsize + i;
-			if ((bits[index] & map->bits[index]) != map->bits[index]) {
-				changed = true;
-				bits[index] |= map->bits[index];
-			}
+	for (unsigned i = 0; i < bits_size; i++) {
+		if ((bits[i] & map->bits[i]) != map->bits[i]) {
+			changed = true;
+			bits[i] |= map->bits[i];
 		}
 	}
 	return changed;
@@ -162,20 +159,16 @@ void Bloomap::clear(void) {
 }
 
 Bloomap* Bloomap::intersect(Bloomap* map) {
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		for (unsigned i = 0; i < bits_segsize; i++) {
-			bits[comp*bits_segsize + i] &= map->bits[comp*bits_segsize + i];
-		}
+	for (unsigned i = 0; i < bits_size; i++) {
+		bits[i] &= map->bits[i];
 	}
 	return this;
 }
 
 Bloomap* Bloomap::or_from(Bloomap *filter) {
 	changed = false;
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		for (unsigned i = 0; i < bits_segsize; i++) {
-			bits[comp*bits_segsize + i] |= filter->bits[comp*bits_segsize + i];
-		}
+	for (unsigned i = 0; i < bits_size; i++) {
+		bits[i] |= filter->bits[i];
 	}
 	return this;
 }
@@ -253,10 +246,8 @@ bool Bloomap::operator==(const Bloomap* rhs) {
 
 	/* If this passes, let's check the bits */
 	if (ncomp != rhs->ncomp || compsize != rhs->compsize || nfunc != rhs->nfunc) return false;
-	for (unsigned comp = 0; comp < ncomp; comp++) {
-		for (unsigned i = 0; i < bits_segsize; i++) {
-			if (rhs->bits[comp*bits_segsize + i] != bits[comp*bits_segsize + i]) return false;
-		}
+	for (unsigned i = 0; i < bits_size; i++) {
+		if (rhs->bits[i] != bits[i]) return false;
 	}
 	return true;
 }
