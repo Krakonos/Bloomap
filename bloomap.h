@@ -141,6 +141,6 @@ class BloomapIterator : public std::iterator<std::input_iterator_tag, unsigned >
 BloomapIterator begin(Bloomap *map);
 BloomapIterator end(Bloomap *map);
 
-#define BLOOMAP_FOR_EACH(VAR, MAP) for (BloomapIterator _bloomap_it_##MAP(MAP,VAR); _bloomap_it_##MAP != end(MAP); _bloomap_it_##MAP++, VAR=*_bloomap_it_##MAP)
+#define BLOOMAP_FOR_EACH(VAR, MAP) for (BloomapIterator _bloomap_it(MAP,VAR); _bloomap_it != end(MAP); _bloomap_it++, VAR=*_bloomap_it)
 
 #endif
