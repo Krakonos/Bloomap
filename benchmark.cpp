@@ -187,8 +187,8 @@ static void CustomArgs( benchmark::internal::Benchmark* b ) {
 	b->Arg(1 << 14);
 }
 
-BENCHMARK(BM_stdvector_intersect)->Apply(CustomArgs);
 BENCHMARK(BM_bloomap_intersect)->Apply(BloomapCustomArgs);
+BENCHMARK(BM_stdvector_intersect)->Apply(CustomArgs);
 BENCHMARK(BM_bloomap_insert)->Apply(BloomapCustomArgs);
 BENCHMARK(BM_bloomap_nofamily_insert)->Apply(BloomapCustomArgs);
 BENCHMARK(BM_stdmap_insert)->Apply(CustomArgs);

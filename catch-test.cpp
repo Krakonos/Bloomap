@@ -104,6 +104,8 @@ TEST_CASE( "****** Elementary Bloomap operations." ) {
 			map1->clear();
 		}
 	}
+	delete map1;
+	delete f;
 }
 
 TEST_CASE( "***** Bloomap union.", "[union]" ) {
@@ -142,6 +144,9 @@ TEST_CASE( "***** Bloomap union.", "[union]" ) {
 	}
 
 	/* TODO: check if it's the same map as if the elements were inserted all into one */
+	delete map1;
+	delete map2;
+	delete f;
 }
 
 TEST_CASE( "***** Bloomap intersection.", "[intersection]" ) {
@@ -199,6 +204,12 @@ TEST_CASE( "***** Bloomap intersection.", "[intersection]" ) {
 		REQUIRE( mapi->popcount() == 0 );
 
 	}
+
+	delete map1;
+	delete map2;
+	delete map3;
+	delete mapi;
+	delete f;
 }
 
 TEST_CASE( "****** BloomapFamily iterator.", "[operators]" ) {
@@ -215,6 +226,8 @@ TEST_CASE( "****** BloomapFamily iterator.", "[operators]" ) {
 	//	std::cerr << "Candidate: " << *it << std::endl;
 	}
 
+	delete map1;
+	delete f;
 }
 
 TEST_CASE( "****** Bloomap iterator.", "[operators]" ) {
@@ -255,6 +268,8 @@ TEST_CASE( "****** Bloomap iterator.", "[operators]" ) {
 
 	REQUIRE( found_from_c == c.size() );
 	REQUIRE( found_not_in_map == 0 );
+	delete map1;
+	delete f;
 }
 
 TEST_CASE( "****** Bloomap operator==().", "[operators]" ) {
@@ -286,6 +301,9 @@ TEST_CASE( "****** Bloomap operator==().", "[operators]" ) {
 		map2->add(e);
 		REQUIRE(*map1 != map2);
 	}
+	delete map1;
+	delete map2;
+	delete f;
 }
 
 TEST_CASE( "****** Bloomap speed.", "[benchmark]" ) {
@@ -313,4 +331,6 @@ TEST_CASE( "****** Bloomap speed.", "[benchmark]" ) {
 			map3.push_back(ins_data[i]);
 		}
 	}
+	delete map1;
+	delete f;
 }
