@@ -6,9 +6,8 @@
 
 #include "bloomap.h"
 #include "bloomapfamily.h"
-#include "bloomfilter.h"
 
-#define ELE 1000
+#define ELE 100
 #define ELE_BENCH 1000000
 #define ITER 10
 #define SLACK 1.2
@@ -48,7 +47,11 @@ bool bloomap_check_fp_rate(Bloomap* map, Contents& list, double exp_rate) {
 		if (map->contains(e)) fp_count++;
 	}
 	double fp_rate = 1.0*fp_count / samples;
-	return ( fp_rate < exp_rate );
+	if ( fp_rate < exp_rate ) return true;
+	else {
+		std::cerr << "FP rate is NOT acceptable! Required: " << exp_rate << "Result: " << fp_rate << std::endl;
+		return false;
+	}
 }
 
 /* Insert some random bogus elements into the map, to fill the sidelist. */

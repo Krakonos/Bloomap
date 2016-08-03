@@ -40,24 +40,6 @@ int main() {
     }
 	*/
 
-    vector<unsigned> l = {
-		 333582338,
-		 513937457,
-		 711845894,
-	    1046370347,
-		1402492972,
-		1520982030};
-
-	for (vector<unsigned>::iterator it = l.begin(); it != l.end(); ++it) {
-		unsigned x = *it;
-			map1->add(x-1);
-		unsigned h1 = map1->last_index_hash;
-			map1->add(x);
-		unsigned h2 = map1->last_index_hash;
-			map1->add(x+1);
-		unsigned h3 = map1->last_index_hash;
-		cerr << "Inserting: " << x << " with hashes: " << h1 << ", " << h2 << ", "<<  h3 << "." << endl;
-	}
 
     unsigned max = 0;
     for (BloomapIterator it = begin(map1); !it.atEnd(); ++it) {

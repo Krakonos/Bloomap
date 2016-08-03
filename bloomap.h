@@ -14,9 +14,13 @@
 #include <vector>
 #include <set>
 #include <iterator>
+#include <cassert>
 
-#include "bloomfilter.h"
 #include "bloomapfamily.h"
+
+#define BITS_TYPE uint64_t
+#define BITS_WORD (sizeof(BITS_TYPE)*8)
+
 
 class BloomapFamily;
 class BloomapFamilyIterator;
@@ -73,25 +77,26 @@ class Bloomap {
 		 * used, and has to be reset by it's user. */
 		bool changed;
 		bool inline set(unsigned comp, unsigned bit) {
-			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
-			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
+			unsigned index = comp*bits_segsize + bit / BITS_WORD;
+			assert (index < ((comp+1)*bits_segsize));
+			BITS_TYPE mask = ((BITS_TYPE) 1) << (bit % BITS_WORD);
 			changed |= !(bits[index] & mask);
 			bits[index] |= mask;
 			return changed;
 		}
 
 		bool inline reset(unsigned comp, unsigned bit) {
-			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
-			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
+			unsigned index = comp*bits_segsize + bit / BITS_WORD;
+			BITS_TYPE mask = ((BITS_TYPE) 1) << (bit % BITS_WORD);
 			changed |= bits[index] & mask;
 			bits[index] &= ~mask;
 			return changed;
 		}
 
 		bool inline get(unsigned comp, unsigned bit) const {
-			unsigned index = comp*bits_segsize + bit / sizeof(BITS_TYPE);
-			BITS_TYPE mask = 1 << (bit % sizeof(BITS_TYPE));
-			return bits[index] & mask;
+			unsigned index = comp*bits_segsize + bit / BITS_WORD;
+			BITS_TYPE mask = ((BITS_TYPE) 1) << (bit % BITS_WORD);
+			return !!(bits[index] & mask);
 		}
 
 	friend class BloomapIterator;

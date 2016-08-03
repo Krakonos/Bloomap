@@ -1,11 +1,15 @@
 #CXXFLAGS=-std=c++98 -g -Wall -DDEBUG_STATS -O3 -fno-omit-frame-pointer
-CXXFLAGS=-std=c++98 -g -Wall -O2 -fno-omit-frame-pointer
+CXXFLAGS=-std=c++98 -g -Wall -Wextra -O2 -fno-omit-frame-pointer
 CC=g++
 LDFLAGS=$(CXXFLAGS) -lbenchmark -lpthread
 
 OBJECTS=bloomapfamily.o bloomap.o
 
-all: benchmark run-benchmark
+
+all: benchmark run-benchmark deps
+
+deps:
+	$(CC) $(CXXFLAGS) -M *.cpp *.h > Makefile.deps
 
 bang: bang.cpp $(OBJECTS)
 	$(CC) -o $@ $(CXXFLAGS) -std=c++11 $^
@@ -65,4 +69,6 @@ clean:
 	rm -f test test-intersection benchmark *.o *.html
 
 
-.PHONY: clean check
+.PHONY: clean check all
+
+-include Makefile.deps

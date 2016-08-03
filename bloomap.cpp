@@ -62,25 +62,33 @@ void Bloomap::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc, unsign
 		hashfn_b.push_back(rand());
 	}
 
-	/* Generate compartments */
-	bits_segsize = (compsize / sizeof(BITS_TYPE))+1;
+	/* Generate compartments.*/
+	//std::cerr << "Compsize is: " << compsize << std::endl;
+	bits_segsize = (compsize / BITS_WORD);
+	//std::cerr << "Segment is: " << bits_segsize << std::endl;
 	bits_size = bits_segsize*ncomp;
+
+	/* If we are in a family, append a few more bits for the side index. */
+	if (f) {
+		index_size = ((1 << index_logsize) / BITS_WORD)+1;
+		bits_size += index_size;
+	} else {
+		side_index = NULL;
+	}
+
 	bits = new BITS_TYPE[bits_size];
 	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
 
-	/* Allocate the side index if in family */
+	/* Make a pointer into the side index, just for convenience. */
 	if (f) {
-		index_size = ((1 << index_logsize) / (sizeof(BITS_TYPE)*8))+1;
-		//std::cerr << "Index size=" << index_size << std::endl;
-		side_index = new BITS_TYPE[index_size];
-		memset(side_index, 0, index_size*sizeof(BITS_TYPE));
-	} else
-		side_index = NULL;
+		side_index = bits + (bits_size - index_size);
+	}
+
 }
 
 Bloomap::~Bloomap() {
 	delete[] bits;
-	delete[] side_index;
+	/* Side index is actually inside bits, don't try to delete it! */
 }
 
 bool Bloomap::add(unsigned ele) {
@@ -91,8 +99,8 @@ bool Bloomap::add(unsigned ele) {
 	if (f) {
 		last_index_hash = f->newElement(ele);
 		assert(last_index_hash < (1U << index_logsize));
-		unsigned side_i = last_index_hash / (sizeof(BITS_TYPE)*8);
-		side_index[side_i] |= 1 << (last_index_hash % (sizeof(BITS_TYPE)*8) );
+		unsigned side_i = last_index_hash / BITS_WORD;
+		side_index[side_i] |= ((BITS_TYPE) 1) << (last_index_hash % BITS_WORD );
 		//std::cerr << "side_index[" << side_i << "] |= " << (1 << (last_index_hash % (sizeof(BITS_TYPE)*8) )) << std::endl;
 	}
 
@@ -166,9 +174,12 @@ Bloomap* Bloomap::intersect(Bloomap* map) {
 }
 
 Bloomap* Bloomap::or_from(Bloomap *filter) {
+	assert(this != filter);
+	BITS_TYPE*__restrict from = filter->bits;
+	BITS_TYPE*__restrict to = bits;
 	changed = false;
 	for (unsigned i = 0; i < bits_size; i++) {
-		bits[i] |= filter->bits[i];
+		to[i] |= from[i];
 	}
 	return this;
 }
@@ -311,17 +322,18 @@ bool BloomapIterator::advanceHashIterator(void) {
 }
 
 bool BloomapIterator::findNextHash(void) {
-	unsigned side_i, side_mask;
+	unsigned side_i;
+	BITS_TYPE side_mask;
 	do {
 		current_hash++;
-		side_i = current_hash / (sizeof(BITS_TYPE)*8);
+		side_i = current_hash / BITS_WORD;
 		//std::cerr << "Scanning hash: " << current_hash << ", index: " << side_i << std::endl;
 		if (side_i >= map->index_size) {
 			//std::cerr << "Ended: " << side_i << std::endl;
 			flagAtEnd = true;
 			return false; /* There is no next hash */
 		}
-		side_mask = (1 << (current_hash % (sizeof(BITS_TYPE)*8) ));
+		side_mask = (((BITS_TYPE) 1) << (current_hash % BITS_WORD));
 		/* We are at the first bit, check if the byte is empty */
 		if ((side_mask == 1) && (map->side_index[side_i] == 0)) {
 			/* The -1 is here to compensate current_hash++ at the start of the loop. */
@@ -356,7 +368,7 @@ BloomapIterator& BloomapIterator::operator++() {
 	return *this;
 }
 
-BloomapIterator BloomapIterator::operator++(int x) {
+BloomapIterator BloomapIterator::operator++(int/*unused: x*/) {
 	BloomapIterator tmp(*this);
 	operator++();
 	return tmp;

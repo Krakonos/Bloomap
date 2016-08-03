@@ -104,13 +104,13 @@ static void BM_stdlist_insert( benchmark::State& state ) {
 }
 
 
-static void H_fill_bloomap( Bloomap* map, uint32_t elements, uint32_t start ) {
+static void H_fill_bloomap( Bloomap* map, uint32_t elements, uint32_t/*unused: start*/ ) {
 	for (uint32_t i = 0; i < elements; i++) {
 		map->add(rand());
 	}
 }
 
-static void H_fill_vector( vector<uint32_t>& v, uint32_t elements, uint32_t start ) {
+static void H_fill_vector( vector<uint32_t>& v, uint32_t elements, uint32_t/*unused:  start*/ ) {
 	v.resize(elements);
 	for (uint32_t i = 0; i < elements; i++) {
 		v.push_back(rand());
@@ -165,7 +165,56 @@ static void BM_stdvector_intersect( benchmark::State& state ) {
 	}
 }
 
+static void BM_bloomap_union( benchmark::State& state ) {
+	uint32_t range = state.range_x();
+	BloomapFamily *f = BloomapFamily::forElementsAndProb(state.range_x(), 1.0/state.range_y());
+	Bloomap *map1 = f->newMap();
+	Bloomap *map2 = f->newMap();
+	Bloomap *map_unionion = f->newMap();
+	H_fill_bloomap(map1, range, 0);
+	H_fill_bloomap(map2, range, range/2);
+
+	while (state.KeepRunning()) {
+		state.PauseTiming();
+		map_unionion->clear();
+		map_unionion->or_from(map1);
+		state.ResumeTiming();
+		benchmark::DoNotOptimize(map_unionion->or_from(map2));
+	}
+
+	delete map2;
+	delete map1;
+	delete f;
+	delete map_unionion;
+}
+
+static void BM_stdvector_union( benchmark::State& state ) {
+	uint32_t range = state.range_x();
+    vector<uint32_t> v1,v2;
+	H_fill_vector(v1, range, 0);
+	H_fill_vector(v2, range, range/2);
+
+    vector<uint32_t> v_unionion;
+	v_unionion.resize(range, 0);
+
+	while (state.KeepRunning()) {
+		//for (unsigned i = 0; i < 100; i++) {
+			benchmark::DoNotOptimize(v_unionion.data());
+			benchmark::DoNotOptimize(v1.data());
+			benchmark::DoNotOptimize(v2.data());
+			set_union(v1.begin(), v1.end(),
+					v2.begin(), v2.end(),
+					back_inserter(v_unionion));
+			CLOBBER_MEMORY;
+		//}
+		state.PauseTiming();
+		v_unionion.clear();
+		state.ResumeTiming();
+	}
+}
+
 static void BloomapCustomArgs( benchmark::internal::Benchmark* b ) {
+	b->ArgPair(1 << 6, 10);
 	b->ArgPair(1 << 8, 10);
 	b->ArgPair(1 << 8, 50);
 	b->ArgPair(1 << 8, 100);
@@ -181,12 +230,15 @@ static void BloomapCustomArgs( benchmark::internal::Benchmark* b ) {
 }
 
 static void CustomArgs( benchmark::internal::Benchmark* b ) {
+	b->Arg(1 << 2);
 	b->Arg(1 << 8);
 	b->Arg(1 << 10);
 	b->Arg(1 << 12);
 	b->Arg(1 << 14);
 }
 
+BENCHMARK(BM_bloomap_union)->Apply(BloomapCustomArgs);
+BENCHMARK(BM_stdvector_union)->Apply(CustomArgs);
 BENCHMARK(BM_bloomap_intersect)->Apply(BloomapCustomArgs);
 BENCHMARK(BM_stdvector_intersect)->Apply(CustomArgs);
 BENCHMARK(BM_bloomap_insert)->Apply(BloomapCustomArgs);
