@@ -26,6 +26,8 @@ class BloomapFamily;
 class BloomapFamilyIterator;
 
 class Bloomap {
+    	private:
+	    	Bloomap() {};
 	public:
 		Bloomap(BloomapFamily* f, unsigned m, unsigned k, unsigned index_logsize);
 		Bloomap(Bloomap *orig);
@@ -37,6 +39,7 @@ class Bloomap {
 		bool add(Bloomap *map);
 		bool contains(unsigned ele);
 		bool isEmpty(void);
+		bool isIntersectionEmpty(Bloomap* map);
 		void clear(void);
 		Bloomap* intersect(Bloomap* map);
 		Bloomap* or_from(Bloomap *filter);
@@ -78,6 +81,7 @@ class Bloomap {
 		bool changed;
 		bool inline set(unsigned comp, unsigned bit) {
 			unsigned index = comp*bits_segsize + bit / BITS_WORD;
+			assert(index < bits_size);
 			assert (index < ((comp+1)*bits_segsize));
 			BITS_TYPE mask = ((BITS_TYPE) 1) << (bit % BITS_WORD);
 			changed |= !(bits[index] & mask);
@@ -87,6 +91,7 @@ class Bloomap {
 
 		bool inline reset(unsigned comp, unsigned bit) {
 			unsigned index = comp*bits_segsize + bit / BITS_WORD;
+			assert(index < bits_size);
 			BITS_TYPE mask = ((BITS_TYPE) 1) << (bit % BITS_WORD);
 			changed |= bits[index] & mask;
 			bits[index] &= ~mask;
@@ -95,6 +100,9 @@ class Bloomap {
 
 		bool inline get(unsigned comp, unsigned bit) const {
 			unsigned index = comp*bits_segsize + bit / BITS_WORD;
+			assert(index < bits_size);
+			assert(bit < compsize);
+			assert (index < ((comp+1)*bits_segsize));
 			BITS_TYPE mask = ((BITS_TYPE) 1) << (bit % BITS_WORD);
 			return !!(bits[index] & mask);
 		}

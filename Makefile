@@ -1,5 +1,5 @@
 #CXXFLAGS=-std=c++98 -g -Wall -DDEBUG_STATS -O3 -fno-omit-frame-pointer
-CXXFLAGS=-std=c++98 -g -Wall -Wextra -O2 -fno-omit-frame-pointer
+CXXFLAGS=-std=c++98 -g -Wall -Wextra -O2 -fno-omit-frame-pointer -fsanitize=address
 CC=g++
 LDFLAGS=$(CXXFLAGS) -lbenchmark -lpthread
 

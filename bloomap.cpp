@@ -173,6 +173,21 @@ Bloomap* Bloomap::intersect(Bloomap* map) {
 	return this;
 }
 
+bool Bloomap::isIntersectionEmpty(Bloomap* map) {
+	for (unsigned comp = 0; comp < ncomp; comp++) {
+		bool empty = true;
+		for (unsigned i = 0; i < bits_segsize; i++) {
+		    	unsigned index = comp*bits_segsize + i;
+			if (bits[i] & map->bits[i]) {
+				empty = false;
+				break;
+			}
+		}
+		if (empty) return true;
+	}
+	return false;
+}
+
 Bloomap* Bloomap::or_from(Bloomap *filter) {
 	assert(this != filter);
 	BITS_TYPE*__restrict from = filter->bits;
@@ -198,9 +213,10 @@ void Bloomap::splitFamily(void) {
 }
 
 unsigned Bloomap::hash(unsigned ele, unsigned i) {
-	unsigned p = 767461883;
-	//return (ele*hashfn_a[i] + hashfn_b[i]) >> compsize_shiftbits;
-	return ((ele*hashfn_a[i] + hashfn_b[i]) %p) % compsize;
+	//unsigned p = 767461883;
+	uint32_t h = (ele*hashfn_a[i] + hashfn_b[i]);
+	h >>= compsize_shiftbits;
+	return h;
 	//return MurmurHash1(ele, hash_functions[i]) % compsize;
 }
 
