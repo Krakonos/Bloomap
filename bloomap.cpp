@@ -27,6 +27,7 @@ Bloomap::Bloomap(Bloomap *orig) {
 
 	_init(orig->ncomp, orig->compsize, orig->nfunc, orig->index_logsize);
 
+	specials = orig->specials;
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		for (unsigned pos = 0; pos < orig->compsize; pos++) {
 			bits[comp*bits_segsize + pos] = orig->bits[comp*bits_segsize + pos];
@@ -39,6 +40,7 @@ void Bloomap::_init(unsigned _ncomp, unsigned _compsize, unsigned _nfunc, unsign
 	compsize = _compsize;
 	nfunc = _nfunc;
 	index_logsize = _index_logsize;
+	specials = 0x0;
 
 	assert(ncomp);
 	assert(compsize);
@@ -105,6 +107,12 @@ bool Bloomap::add(unsigned ele) {
 	}
 
 	changed = false;
+	if (ele < sizeof(specials)*CHAR_BIT) {
+		SPECIALS_TYPE mask = 0x1 << ele;
+		if (specials & mask) changed = false;
+		else specials |= mask;
+		return changed;
+	}
 	/* Set appropriate bits in each container */
 	unsigned fn = 0;
 	for (unsigned comp = 0; comp < ncomp; comp++) {
@@ -118,6 +126,8 @@ bool Bloomap::add(unsigned ele) {
 
 bool Bloomap::add(Bloomap *map) {
 	changed = false;
+	if (specials != map->specials) changed = true;
+	specials |= map->specials;
 	for (unsigned i = 0; i < bits_size; i++) {
 		if ((bits[i] & map->bits[i]) != map->bits[i]) {
 			changed = true;
@@ -128,6 +138,10 @@ bool Bloomap::add(Bloomap *map) {
 }
 
 bool Bloomap::contains(unsigned ele) {
+	if (ele < sizeof(specials)*CHAR_BIT) {
+		SPECIALS_TYPE mask = 0x1 << ele;
+		return (specials & mask);
+	}
 	bool ret = true;
 	unsigned fn = 0;
 	for (unsigned comp = 0; comp < ncomp; comp++) {
@@ -149,6 +163,7 @@ bool Bloomap::contains(unsigned ele) {
 }
 
 bool Bloomap::isEmpty(void) {
+	if (specials) return false;
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		bool empty = true;
 		for (unsigned i = 0; i < bits_segsize; i++) {
@@ -163,10 +178,12 @@ bool Bloomap::isEmpty(void) {
 }
 
 void Bloomap::clear(void) {
+	specials = 0;
 	memset(bits, 0, bits_size*sizeof(BITS_TYPE));
 }
 
 Bloomap* Bloomap::intersect(Bloomap* map) {
+	specials &= map->specials;
 	for (unsigned i = 0; i < bits_size; i++) {
 		bits[i] &= map->bits[i];
 	}
@@ -174,6 +191,7 @@ Bloomap* Bloomap::intersect(Bloomap* map) {
 }
 
 bool Bloomap::isIntersectionEmpty(Bloomap* map) {
+	if (specials & map->specials) return false;
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		bool empty = true;
 		for (unsigned i = 0; i < bits_segsize; i++) {
@@ -190,6 +208,7 @@ bool Bloomap::isIntersectionEmpty(Bloomap* map) {
 
 Bloomap* Bloomap::or_from(Bloomap *filter) {
 	assert(this != filter);
+	specials |= filter->specials;
 	BITS_TYPE*__restrict from = filter->bits;
 	BITS_TYPE*__restrict to = bits;
 	changed = false;
@@ -230,6 +249,7 @@ void Bloomap::resetStats(void) {
 void Bloomap::dump(void) {
 	using namespace std;
 	cerr << "=> Bloom filter dump (" << ncomp << " compartments, " << compsize << " bits in each)" << endl;
+	cerr << "  specials=" << specials << endl;
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
 			if (get(comp,i)) cerr << "1";
@@ -250,7 +270,7 @@ void Bloomap::dumpStats(void) {
 }
 
 unsigned Bloomap::popcount(void) {
-	unsigned count = 0;
+	unsigned count = __builtin_popcount(specials);
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
 			if (get(comp,i)) count++;
@@ -270,6 +290,7 @@ bool Bloomap::operator==(const Bloomap* rhs) {
 	if (rhs == NULL) return false;
 	if (this == rhs) return true;
 	if (f != rhs->f) return false;
+	if (specials != rhs->specials) return false;
 
 	/* If this passes, let's check the bits */
 	if (ncomp != rhs->ncomp || compsize != rhs->compsize || nfunc != rhs->nfunc) return false;

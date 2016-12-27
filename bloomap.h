@@ -11,6 +11,7 @@
 #define __BLOOMAP_H__
 
 #include <stdint.h>
+#include <limits.h>
 #include <vector>
 #include <set>
 #include <iterator>
@@ -19,6 +20,7 @@
 #include "bloomapfamily.h"
 
 #define BITS_TYPE uint64_t
+#define SPECIALS_TYPE uint8_t
 #define BITS_WORD (sizeof(BITS_TYPE)*8)
 
 
@@ -70,6 +72,7 @@ class Bloomap {
 		unsigned nfunc, compsize, compsize_shiftbits, ncomp, bits_segsize, bits_size;
 		BloomapFamily *f;
 		BITS_TYPE* bits;
+		SPECIALS_TYPE specials;
 
 		/* Side index, only used if part of a family */
 		BITS_TYPE* side_index;

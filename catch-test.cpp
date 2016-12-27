@@ -18,8 +18,8 @@ typedef map<uint64_t,bool> Contents;
 Contents bloomap_fill(Bloomap* map, unsigned count, unsigned seed = 0) {
 	if (seed) srand(seed);
 	Contents insert;
+	unsigned e = 1; /* First attempt should try to insert 1, as it's special. */
 	for (unsigned i = 0; i < count; i++) {
-		unsigned e = rand();
 		while (insert.count(e)) e = rand(); /* Don't insert value twice */
 		map->add( e );
 		assert(map->contains(e));
@@ -78,6 +78,11 @@ TEST_CASE( "****** Elementary Bloomap operations." ) {
 
 	SECTION("--> empty map does not contain elements") {
 		REQUIRE( !map1->contains(666) );
+	}
+
+	SECTION("--> insertion of special elements work") {
+		map1->add(1);
+		REQUIRE( map1->contains(1) );
 	}
 
 	SECTION("--> fill with random elements and check them") {
@@ -185,10 +190,14 @@ TEST_CASE( "***** Bloomap intersection.", "[intersection]" ) {
 
 	SECTION("--> Elements contained in intersection are indeed in both maps") {
 		unsigned missing_elements = 0;
+		/* Iterate over elements from map1 */
 		for (Contents::iterator it = c1.begin(); it != c1.end(); ++it) {
-			if (!mapi->contains((*it).first)) continue;
-			if (!map2->contains((*it).first)) continue;
-			missing_elements++;
+			/* Check if the element is in map2. If true, expect it in mapi also. */
+			if (map2->contains((*it).first)) {
+				if (!mapi->contains((*it).first)) {
+					missing_elements++;
+				}
+			}
 		}
 		REQUIRE( missing_elements == 0 );
 	}
@@ -271,6 +280,7 @@ TEST_CASE( "****** Bloomap iterator.", "[operators]" ) {
 
 	REQUIRE( found_from_c == c.size() );
 	REQUIRE( found_not_in_map == 0 );
+	REQUIRE( map1->contains(1) ); /* 1 was inserted in bloomap_fill */
 	delete map1;
 	delete f;
 }
@@ -294,6 +304,11 @@ TEST_CASE( "****** Bloomap operator==().", "[operators]" ) {
 		bloomap_fill(map1, ELE);
 		map2->or_from(map1);
 		REQUIRE(*map1 == map2);
+	}
+
+	SECTION("--> Special element break equality.") {
+		map2->add(1L);
+		REQUIRE(*map1 != map2);
 	}
 
 	SECTION("--> Distinc copies are not equal.") {
