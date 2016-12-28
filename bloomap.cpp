@@ -126,7 +126,7 @@ bool Bloomap::add(unsigned ele) {
 
 bool Bloomap::add(Bloomap *map) {
 	changed = false;
-	if (specials != map->specials) changed = true;
+	if ((specials | map->specials) != specials) changed = true;
 	specials |= map->specials;
 	for (unsigned i = 0; i < bits_size; i++) {
 		if ((bits[i] & map->bits[i]) != map->bits[i]) {
@@ -249,7 +249,7 @@ void Bloomap::resetStats(void) {
 void Bloomap::dump(void) {
 	using namespace std;
 	cerr << "=> Bloom filter dump (" << ncomp << " compartments, " << compsize << " bits in each)" << endl;
-	cerr << "  specials=" << specials << endl;
+	cerr << "  specials=" << (unsigned) specials << endl;
 	for (unsigned comp = 0; comp < ncomp; comp++) {
 		for (unsigned i = 0; i < compsize; i++) {
 			if (get(comp,i)) cerr << "1";
