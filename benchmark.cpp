@@ -188,6 +188,29 @@ static void BM_bloomap_union( benchmark::State& state ) {
 	delete map_unionion;
 }
 
+static void BM_bloomap_union_add( benchmark::State& state ) {
+	uint32_t range = state.range_x();
+	BloomapFamily *f = BloomapFamily::forElementsAndProb(state.range_x(), 1.0/state.range_y());
+	Bloomap *map1 = f->newMap();
+	Bloomap *map2 = f->newMap();
+	Bloomap *map_unionion = f->newMap();
+	H_fill_bloomap(map1, range, 0);
+	H_fill_bloomap(map2, range, range/2);
+
+	while (state.KeepRunning()) {
+		state.PauseTiming();
+		map_unionion->clear();
+		map_unionion->add(map1);
+		state.ResumeTiming();
+		benchmark::DoNotOptimize(map_unionion->add(map2));
+	}
+
+	delete map2;
+	delete map1;
+	delete f;
+	delete map_unionion;
+}
+
 static void BM_stdvector_union( benchmark::State& state ) {
 	uint32_t range = state.range_x();
     vector<uint32_t> v1,v2;
@@ -238,6 +261,7 @@ static void CustomArgs( benchmark::internal::Benchmark* b ) {
 }
 
 BENCHMARK(BM_bloomap_union)->Apply(BloomapCustomArgs);
+BENCHMARK(BM_bloomap_union_add)->Apply(BloomapCustomArgs);
 BENCHMARK(BM_stdvector_union)->Apply(CustomArgs);
 BENCHMARK(BM_bloomap_intersect)->Apply(BloomapCustomArgs);
 BENCHMARK(BM_stdvector_intersect)->Apply(CustomArgs);
