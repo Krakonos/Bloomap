@@ -129,7 +129,7 @@ bool Bloomap::add(Bloomap *map) {
 	if ((specials | map->specials) != specials) changed = true;
 	specials |= map->specials;
 	for (unsigned i = 0; i < bits_size; i++) {
-		if ((bits[i] & map->bits[i]) != map->bits[i]) {
+		if ((bits[i] | map->bits[i]) != bits[i]) {
 			changed = true;
 			bits[i] |= map->bits[i];
 		}
