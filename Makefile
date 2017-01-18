@@ -31,7 +31,7 @@ run-benchmark: benchmark
 
 check: catch
 	./catch-test -d yes
-	valgrind ./catch-test -d yes
+	#valgrind ./catch-test -d yes
 
 tests: test test-intersection
 
